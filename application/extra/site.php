@@ -1,7 +1,7 @@
 <?php
 
 return array (
-  'name' => 'FastAdmin',
+  'name' => '思聪代理',
   'beian' => '',
   'cdnurl' => '',
   'version' => '1.0.1',
@@ -15,18 +15,17 @@ return array (
   'fixedpage' => 'dashboard',
   'categorytype' => 
   array (
-    'default' => 'Default',
-    'page' => 'Page',
-    'article' => 'Article',
-    'test' => 'Test',
+    'style' => '款式',
+    'brand' => '品牌',
+    'activity' => '活动',
+    'price' => '价格',
   ),
   'configgroup' => 
   array (
     'basic' => 'Basic',
-    'email' => 'Email',
     'dictionary' => 'Dictionary',
     'user' => 'User',
-    'example' => 'Example',
+    'pay' => '打款配置',
   ),
   'mail_type' => '1',
   'mail_smtp_host' => 'smtp.qq.com',
@@ -35,4 +34,11 @@ return array (
   'mail_smtp_pass' => 'password',
   'mail_verify_type' => '2',
   'mail_from' => '10000@qq.com',
+  'level1' => '一级代理',
+  'level2' => '二级代理',
+  'level3' => '三级代理',
+  'level4' => '四级代理',
+  'ali_account' => '123456',
+  'ali_name' => '毛毛',
+  'wx_service' => '123456',
 );
