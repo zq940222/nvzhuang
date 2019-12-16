@@ -3,8 +3,8 @@
 namespace app\api\controller;
 
 use app\common\controller\Api;
-use app\common\model\Alisms;
-use app\common\model\Config;
+use app\common\library\Ems;
+use app\common\library\Sms;
 use fast\Random;
 use think\Validate;
 
@@ -13,7 +13,7 @@ use think\Validate;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login', 'mobilelogin', 'register', 'resetpwd', 'changeemail', 'changemobile', 'third', 'apply_info'];
+    protected $noNeedLogin = ['login', 'mobilelogin', 'register', 'resetpwd', 'changeemail', 'changemobile', 'third'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -22,46 +22,11 @@ class User extends Api
     }
 
     /**
-     * 获取代理申请基本信息
-     *
-     * @param int $user_id  用户id
+     * 会员中心
      */
-    public function apply_info()
+    public function index()
     {
-        $user_id = $this->request->request('user_id');
-        if(!$user_id) {
-            $this->error(__('Invalid parameters'), null, -1);
-        }
-        $pay_config = db('config')
-        ->field('name as "key",title,value')
-        ->where('`group`="pay"')
-        ->select();
-        $pay_info = Config::getArrayData($pay_config);
-
-        $parent_info = [];
-        if($user_id == -1) {
-            $parent_info['nickname'] = $pay_info['company_name'];
-            $parent_info['mobile'] = $pay_info['company_phone'];
-        }else{
-            $parent_info = db('user')
-            ->field('nickname,mobile')
-            ->where('id='.$user_id)
-            ->find();
-        }
-        unset($pay_info['company_address']);
-        unset($pay_info['company_phone']);
-        unset($pay_info['company_name']);
-
-        $level_info = db('config')
-        ->field('name as "key",title,value')
-        ->where('`group`="user"')
-        ->select();
-        
-        $data['pay_info'] = $pay_info;
-        $data['parent_info'] = $parent_info;
-        $data['level_info'] = $level_info;
-
-        $this->success('请求成功', $data);
+        $this->success('', ['welcome' => $this->auth->nickname]);
     }
 
     /**
@@ -79,6 +44,44 @@ class User extends Api
         }
         $ret = $this->auth->login($account, $password);
         if ($ret) {
+            $data = ['userinfo' => $this->auth->getUserinfo()];
+            $this->success(__('Logged in successful'), $data);
+        } else {
+            $this->error($this->auth->getError());
+        }
+    }
+
+    /**
+     * 手机验证码登录
+     *
+     * @param string $mobile  手机号
+     * @param string $captcha 验证码
+     */
+    public function mobilelogin()
+    {
+        $mobile = $this->request->request('mobile');
+        $captcha = $this->request->request('captcha');
+        if (!$mobile || !$captcha) {
+            $this->error(__('Invalid parameters'));
+        }
+        if (!Validate::regex($mobile, "^1\d{10}$")) {
+            $this->error(__('Mobile is incorrect'));
+        }
+        if (!Sms::check($mobile, $captcha, 'mobilelogin')) {
+            $this->error(__('Captcha is incorrect'));
+        }
+        $user = \app\common\model\User::getByMobile($mobile);
+        if ($user) {
+            if ($user->status != 'normal') {
+                $this->error(__('Account is locked'));
+            }
+            //如果已经有账号则直接登录
+            $ret = $this->auth->direct($user->id);
+        } else {
+            $ret = $this->auth->register($mobile, Random::alnum(), '', $mobile, []);
+        }
+        if ($ret) {
+            Sms::flush($mobile, 'mobilelogin');
             $data = ['userinfo' => $this->auth->getUserinfo()];
             $this->success(__('Logged in successful'), $data);
         } else {
