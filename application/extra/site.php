@@ -41,4 +41,13 @@ return array (
   'ali_account' => '123456',
   'ali_name' => '毛毛',
   'wx_service' => '123456',
+  'bank_account' => '123456',
+  'bank_username' => '张三',
+  'company_name' => '阿里巴巴',
+  'company_phone' => '010-000111222',
+  'company_address' => '杭州阿里巴巴',
+  'level1_price' => '1000',
+  'level2_price' => '1000',
+  'level3_price' => '1000',
+  'level4_price' => '1000',
 );
