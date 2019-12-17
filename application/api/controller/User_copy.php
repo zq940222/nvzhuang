@@ -3,8 +3,8 @@
 namespace app\api\controller;
 
 use app\common\controller\Api;
-use app\common\model\Alisms;
-use app\common\model\Config;
+use app\common\library\Ems;
+use app\common\library\Sms;
 use fast\Random;
 use think\Validate;
 
@@ -13,7 +13,7 @@ use think\Validate;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login', 'mobilelogin', 'register', 'resetpwd', 'changeemail', 'changemobile', 'third', 'apply_info','apply_agent','get_http_host'];
+    protected $noNeedLogin = ['login', 'mobilelogin', 'register', 'resetpwd', 'changeemail', 'changemobile', 'third'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -21,104 +21,12 @@ class User extends Api
         parent::_initialize();
     }
 
-    public function get_http_host()
-    {
-        $this->success('请求成功', $this->request->server()['HTTP_HOST']);
-    }
     /**
-     * 获取代理申请基本信息
-     *
-     * @param int $user_id  用户id
+     * 会员中心
      */
-    public function apply_info()
+    public function index()
     {
-        $user_id = $this->request->request('user_id');
-        if(!$user_id) {
-            $this->error(__('无效的参数 : user_id'), null, -1);
-        }
-        $pay_config = db('config')
-        ->field('name as "key",title,value')
-        ->where('`group`="pay"')
-        ->select();
-        $pay_info = Config::getArrayData($pay_config);
-
-        $parent_info = [];
-        if($user_id == -1) {
-            $parent_info['nickname'] = $pay_info['company_name'];
-            $parent_info['mobile'] = $pay_info['company_phone'];
-        }else{
-            $parent_info = db('user')
-            ->field('nickname,mobile')
-            ->where('id='.$user_id)
-            ->find();
-        }
-        unset($pay_info['company_address']);
-        unset($pay_info['company_phone']);
-        unset($pay_info['company_name']);
-
-        $level_info = db('config')
-        ->field('name as "key",title,value')
-        ->where('`group`="user"')
-        ->select();
-        
-        $data['pay_info'] = $pay_info;
-        $data['parent_info'] = $parent_info;
-        $data['level_info'] = $level_info;
-
-        $this->success('请求成功', $data);
-    }
-
-    /**
-     * 申请代理
-     *
-     * @param int $superior_id  用户id
-     * @param string $agency_id  代理等级
-     * @param string $name  姓名
-     * @param string $mobile  手机号
-     * @param string $captcha  验证码
-     * @param string $password  密码
-     * @param string $wx  微信账号
-     * @param string $id_card  身份证号
-     * @param int $pay_type  打款方式:1=支付宝,2=银行卡
-     * @param string $pay_money  打款金额
-     * @param string $bank_account  打款帐号
-     * @param string $pay_time  打款日期
-     * @param string $avatar  头像
-     * @param string $pay_certificate_images  打款凭证
-     */
-    public function apply_agent()
-    {
-        $data['superior_id'] = $this->request->request('superior_id');
-        $data['agency_id'] = $this->request->request('agency_id');
-        $data['name'] = $this->request->request('name');
-        $data['mobile'] = $this->request->request('mobile');
-        // $data['captcha'] = $this->request->request('captcha');
-        $data['password'] = $this->request->request('password');
-        $data['wx'] = $this->request->request('wx');
-        $data['id_card'] = $this->request->request('id_card');
-        $data['pay_type'] = $this->request->request('pay_type');
-        // $data['pay_money'] = $this->request->request('pay_money');
-        $data['bank_account'] = $this->request->request('bank_account');
-        $data['pay_time'] = $this->request->request('pay_time');
-        $data['avatar'] = $this->request->request('avatar');
-        $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
-        foreach ($data as $key => $value) {
-            if(!$value) {
-                $this->error(__('无效的参数 : '.$key), null, -1);
-            }
-        }
-        /****验证码验证****/
-
-        /****验证码验证end****/
-        $data['createtime'] = time();
-        $res = db('agent_apply')->insert($data);
-        if($res) {
-            $this->success('提交成功');
-        }else{
-            $this->success('创建数据是败', $res, -2);
-        }
-
-        
+        $this->success('', ['welcome' => $this->auth->nickname]);
     }
 
     /**
@@ -132,10 +40,48 @@ class User extends Api
         $account = $this->request->request('account');
         $password = $this->request->request('password');
         if (!$account || !$password) {
-            $this->error(__('无效的参数'), null, -1);
+            $this->error(__('Invalid parameters'));
         }
         $ret = $this->auth->login($account, $password);
         if ($ret) {
+            $data = ['userinfo' => $this->auth->getUserinfo()];
+            $this->success(__('Logged in successful'), $data);
+        } else {
+            $this->error($this->auth->getError());
+        }
+    }
+
+    /**
+     * 手机验证码登录
+     *
+     * @param string $mobile  手机号
+     * @param string $captcha 验证码
+     */
+    public function mobilelogin()
+    {
+        $mobile = $this->request->request('mobile');
+        $captcha = $this->request->request('captcha');
+        if (!$mobile || !$captcha) {
+            $this->error(__('Invalid parameters'));
+        }
+        if (!Validate::regex($mobile, "^1\d{10}$")) {
+            $this->error(__('Mobile is incorrect'));
+        }
+        if (!Sms::check($mobile, $captcha, 'mobilelogin')) {
+            $this->error(__('Captcha is incorrect'));
+        }
+        $user = \app\common\model\User::getByMobile($mobile);
+        if ($user) {
+            if ($user->status != 'normal') {
+                $this->error(__('Account is locked'));
+            }
+            //如果已经有账号则直接登录
+            $ret = $this->auth->direct($user->id);
+        } else {
+            $ret = $this->auth->register($mobile, Random::alnum(), '', $mobile, []);
+        }
+        if ($ret) {
+            Sms::flush($mobile, 'mobilelogin');
             $data = ['userinfo' => $this->auth->getUserinfo()];
             $this->success(__('Logged in successful'), $data);
         } else {

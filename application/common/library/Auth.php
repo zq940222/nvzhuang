@@ -195,14 +195,15 @@ class Auth
      */
     public function login($account, $password)
     {
-        $field = Validate::is($account, 'email') ? 'email' : (Validate::regex($account, '/^1\d{10}$/') ? 'mobile' : 'username');
-        $user = User::get([$field => $account]);
+        // $field = Validate::is($account, 'email') ? 'email' : (Validate::regex($account, '/^1\d{10}$/') ? 'mobile' : 'username');
+        // $user = User::get([$field => $account]);
+        $user = User::get(['mobile' => $account]);
         if (!$user) {
             $this->setError('Account is incorrect');
             return false;
         }
 
-        if ($user->status != 'normal') {
+        if ($user->status != 1) {
             $this->setError('Account is locked');
             return false;
         }
