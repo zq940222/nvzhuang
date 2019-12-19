@@ -21,17 +21,7 @@ class User extends Api
     {
         parent::_initialize();
     }
-    /**
-     * 获取会员基本信息
-     */
-    public function getUserinfo()
-    {
-        $data = $this->_user->toArray();
-        $allowFields = $this->getAllowFields();
-        $userinfo = array_intersect_key($data, array_flip($allowFields));
-        $userinfo = array_merge($userinfo, Token::get($this->_token));
-        return $userinfo;
-    }
+
     public function get_http_host()
     {
         $this->success('请求成功', $this->request->server()['HTTP_HOST']);
