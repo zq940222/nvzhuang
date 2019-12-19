@@ -1,218 +1,582 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Merit - Bootstrap Agency Template</title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="" name="keywords">
+  <meta content="" name="description">
 
-    <head>
+  <!-- Favicons -->
+  <link href="index/img/favicon.png" rel="icon">
+  <link href="index/img/apple-touch-icon.png" rel="apple-touch-icon">
 
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="">
-        <meta name="author" content="">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic|Raleway:400,300,700" rel="stylesheet">
 
-        <title>FastAdmin - {:__('The fastest framework based on ThinkPHP5 and Bootstrap')}</title>
+  <!-- Bootstrap CSS File -->
+  <link href="index/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
 
-        <!-- Bootstrap Core CSS -->
-        <link href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-        <link href="__CDN__/assets/css/index.css" rel="stylesheet">
+  <!-- Main Stylesheet File -->
+  <link href="index/css/style.css" rel="stylesheet">
 
-        <!-- Plugin CSS -->
-        <link href="https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
-        <link href="https://cdn.staticfile.org/simple-line-icons/2.4.1/css/simple-line-icons.min.css" rel="stylesheet">
 
-        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-        <!--[if lt IE 9]>
-            <script src="https://cdn.staticfile.org/html5shiv/3.7.3/html5shiv.min.js"></script>
-            <script src="https://cdn.staticfile.org/respond.js/1.4.2/respond.min.js"></script>
-        <![endif]-->
-    </head>
+</head>
 
-    <body id="page-top">
 
-        <nav id="mainNav" class="navbar navbar-default navbar-fixed-top">
-            <div class="container">
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse-menu">
-                        <span class="sr-only">Toggle navigation</span><i class="fa fa-bars"></i>
-                    </button>
-                    <a class="navbar-brand page-scroll" href="#page-top"><img src="__CDN__/assets/img/logo.png" style="width:200px;" alt=""></a>
-                </div>
-
-                <div class="collapse navbar-collapse" id="navbar-collapse-menu">
-                    <ul class="nav navbar-nav navbar-right">
-                        <li><a href="https://www.fastadmin.net" target="_blank">{:__('Home')}</a></li>
-                        <li><a href="https://www.fastadmin.net/store.html" target="_blank">{:__('Store')}</a></li>
-                        <li><a href="https://www.fastadmin.net/wxapp.html" target="_blank">{:__('Wxapp')}</a></li>
-                        <li><a href="https://www.fastadmin.net/service.html" target="_blank">{:__('Services')}</a></li>
-                        <li><a href="https://www.fastadmin.net/download.html" target="_blank">{:__('Download')}</a></li>
-                        <li><a href="https://www.fastadmin.net/demo.html" target="_blank">{:__('Demo')}</a></li>
-                        <li><a href="https://www.fastadmin.net/donate.html" target="_blank">{:__('Donation')}</a></li>
-                        <li><a href="https://forum.fastadmin.net" target="_blank">{:__('Forum')}</a></li>
-                        <li><a href="https://doc.fastadmin.net" target="_blank">{:__('Docs')}</a></li>
-                    </ul>
-                </div>
-                <!-- /.navbar-collapse -->
-            </div>
-            <!-- /.container-fluid -->
+<body data-spy="scroll" data-offset="0" data-target="#gn-menu">
+  <!-- ========== MAIN MENU ========== -->
+  <div class="container">
+    <ul id="gn-menu" class="gn-menu-main">
+      <li class="gn-trigger">
+        <a class="gn-icon gn-icon-menu"><span>Menu</span></a>
+        <nav class="gn-menu-wrapper">
+          <div class="gn-scroller">
+            <ul class="gn-menu">
+              <li class="gn-search-item">
+                <input placeholder="Search" type="search" class="gn-search">
+                <a class="gn-icon gn-icon-search"><span>Search</span></a>
+              </li>
+              <li><a href="#home" class="gn-icon gn-icon-home smoothscroll">Home</a></li>
+              <li><a href="#services" class="gn-icon gn-icon-archive smoothscroll">Services</a></li>
+              <li><a href="#portfolio" class="gn-icon gn-icon-pictures smoothscroll">Portfolio</a></li>
+              <li><a href="#blog" class="gn-icon gn-icon-article smoothscroll">Blog</a></li>
+              <li><a href="#prices" class="gn-icon gn-icon-bars smoothscroll">Prices</a></li>
+            </ul>
+          </div>
+          <!-- /gn-scroller -->
         </nav>
+      </li>
+      <li><a href="#home" class="smoothscroll">Merit</a></li>
+    </ul>
+  </div>
+  <!-- /container -->
 
-        <header>
-            <div class="container">
-                <div class="row">
-                    <div class="col-sm-12">
-                        <div class="header-content">
-                            <div class="header-content-inner">
-                                <h1>FastAdmin</h1>
-                                <h3>{:__('The fastest framework based on ThinkPHP5 and Bootstrap')}</h3>
-                                <a href="{:url('index/user/index')}" class="btn btn-outline btn-xl page-scroll">{:__('Go to Member center')}</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  <!-- ========== HEADER SECTION ========== -->
+  <section id="home" name="home"></section>
+  <div id="headerwrap">
+    <div class="container">
+      <div class="col-lg-2"></div>
+      <div class="col-lg-8">
+        <img src="index/img/logo.png">
+        <h1>Merit Design Agency</h1>
+        <h4>* Cooking Ideas Since 1998 *</h4>
+      </div>
+      <div class="col-lg-2">
+      </div>
+    </div>
+    <!-- /container -->
+  </div>
+  <!-- /headerwrap -->
+
+
+  <!-- ABOUT SECTION -->
+  <section id="services" name="services"></section>
+  <div class="container services">
+    <h3>Our Services</h3>
+    <hr>
+    <br>
+    <br>
+    <div class="col-lg-3 service-line">
+      <img src="index/img/services/s01.png">
+      <h4>Social Media</h4>
+      <br>
+      <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable.</p>
+    </div>
+    <!-- /col-lg-3 -->
+
+    <div class="col-lg-3 service-line">
+      <img src="index/img/services/s02.png">
+      <h4>Research</h4>
+      <br>
+      <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable.</p>
+    </div>
+    <!-- /col-lg-3 -->
+
+    <div class="col-lg-3 service-line">
+      <img src="index/img/services/s03.png">
+      <h4>Development</h4>
+      <br>
+      <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable.</p>
+    </div>
+    <!-- /col-lg-3 -->
+
+    <div class="col-lg-3 service-line">
+      <img src="index/img/services/s04.png">
+      <h4>Design</h4>
+      <br>
+      <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable.</p>
+    </div>
+    <!-- /col-lg-3 -->
+  </div>
+  <!-- /container -->
+
+
+  <div class="container services">
+    <br>
+    <br>
+    <h3>Our Philosophy</h3>
+    <hr>
+    <br>
+    <br>
+    <h4>"OUR JOB IS TO BUILD BRANDS. OUR PASSION IS BUILDING BRANDS FROM THE INSIDE OUT."</h4>
+    <br>
+    <br>
+    <div class="col-lg-6">
+      <p>Employees and consumers. Two halves of a brand’s entirety, the whole of a brand’s audience. Sometimes these two halves have very different viewpoints, creating a weak spot in the brand story. Weakness tarnishes credibility. Brands that aren’t credible
+        aren’t viable.</p>
+      <p>We squash weakness by designing the whole brand story. It’s crafted around the truism held by employees and consumers to create an experience that connects from the inside out.</p>
+    </div>
+    <!-- col-lg-6 -->
+    <div class="col-lg-6">
+      <p>By being true to the brand we represent, we elevate the audiences’ relationship to it. Like becomes love becomes a passion. Passion becomes advocacy. And we see the brand blossom from within, creating a whole story the audience embraces. That’s
+        when the brand can truly flex its muscles.</p>
+      <p><img src="index/img/signature.png" class="pull-right"></p>
+    </div>
+    <!-- col-lg-6 -->
+  </div>
+  <!-- container -->
+
+
+
+  <section id="portfolio" name="portfolio"></section>
+  <div id="foliowrap">
+    <div class="container">
+      <h3>Our Work</h3>
+      <br>
+      <br>
+      <div class="row">
+
+        <!-- PORTFOLIO IMAGE 1 -->
+        <div class="col-md-4 ">
+          <div class="grid mask">
+            <figure>
+              <img class="img-responsive" src="index/img/portfolio/folio01.png" alt="">
+              <figcaption>
+                <h5>DASHBOARD</h5>
+                <a data-toggle="modal" href="#myModal" class="btn-primary btn-lg">Take a Look</a>
+              </figcaption>
+              <!-- /figcaption -->
+            </figure>
+            <!-- /figure -->
+          </div>
+          <!-- /grid-mask -->
+          <br>
+        </div>
+        <!-- /col -->
+
+
+        <!-- MODAL SHOW THE PORTFOLIO IMAGE. In this demo, all links point to this modal. You should create
+						      a modal for each of your projects. -->
+
+        <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Project Title</h4>
+              </div>
+              <div class="modal-body">
+                <p><img class="img-responsive" src="index/img/portfolio/folio01.png" alt=""></p>
+                <p>This project was crafted for Some Name corp. Detail here a little about your job requirements and the tools used. Tell about the challenges faced and what you and your team did to solve it.</p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              </div>
             </div>
-        </header>
+            <!-- /.modal-content -->
+          </div>
+          <!-- /.modal-dialog -->
+        </div>
+        <!-- /.modal -->
 
-        <section id="features" class="features">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12 text-center">
-                        <div class="section-heading">
-                            <h2>{:__('Features')}</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="container-fluid">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="icon-user text-primary"></i>
-                                        <h3>{:__('Auth')}</h3>
-                                        <p class="text-muted">{:__('Auth tips')}</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="icon-screen-smartphone text-primary"></i>
-                                        <h3>{:__('Responsive')}</h3>
-                                        <p class="text-muted">{:__('Responsive tips')}</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="icon-present text-primary"></i>
-                                        <h3>{:__('Languages')}</h3>
-                                        <p class="text-muted">{:__('Languages tips')}</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="icon-layers text-primary"></i>
-                                        <h3>{:__('Module')}</h3>
-                                        <p class="text-muted">{:__('Module tips')}</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="icon-docs text-primary"></i>
-                                        <h3>{:__('CRUD')}</h3>
-                                        <p class="text-muted">{:__('CRUD tips')}</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="icon-puzzle text-primary"></i>
-                                        <h3>{:__('Extension')}</h3>
-                                        <p class="text-muted">{:__('Extension tips')}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
+        <!-- PORTFOLIO IMAGE 2 -->
+        <div class="col-md-4">
+          <div class="grid mask">
+            <figure>
+              <img class="img-responsive" src="index/img/portfolio/folio02.png" alt="">
+              <figcaption>
+                <h5>UI DESIGN</h5>
+                <a data-toggle="modal" href="#myModal" class="btn-primary btn-lg">Take a Look</a>
+              </figcaption>
+              <!-- /figcaption -->
+            </figure>
+            <!-- /figure -->
+          </div>
+          <!-- /grid-mask -->
+          <br>
+        </div>
+        <!-- /col -->
+
+        <!-- PORTFOLIO IMAGE 3 -->
+        <div class="col-md-4">
+          <div class="grid mask">
+            <figure>
+              <img class="img-responsive" src="index/img/portfolio/folio03.png" alt="">
+              <figcaption>
+                <h5>ANDROID PAGE</h5>
+                <a data-toggle="modal" href="#myModal" class="btn-primary btn-lg">Take a Look</a>
+              </figcaption>
+              <!-- /figcaption -->
+            </figure>
+            <!-- /figure -->
+          </div>
+          <!-- /grid-mask -->
+          <br>
+        </div>
+        <!-- /col -->
+      </div>
+      <!-- /row -->
+
+      <!-- PORTFOLIO IMAGE 4 -->
+      <div class="row">
+        <div class="col-md-4 ">
+          <div class="grid mask">
+            <figure>
+              <img class="img-responsive" src="index/img/portfolio/folio04.png" alt="">
+              <figcaption>
+                <h5>PROFILE</h5>
+                <a data-toggle="modal" href="#myModal" class="btn-primary btn-lg">Take a Look</a>
+              </figcaption>
+              <!-- /figcaption -->
+            </figure>
+            <!-- /figure -->
+          </div>
+          <!-- /grid-mask -->
+          <br>
+        </div>
+        <!-- /col -->
+
+        <!-- PORTFOLIO IMAGE 5 -->
+        <div class="col-md-4">
+          <div class="grid mask">
+            <figure>
+              <img class="img-responsive" src="index/img/portfolio/folio05.png" alt="">
+              <figcaption>
+                <h5>TWITTER STATUS</h5>
+                <a data-toggle="modal" href="#myModal" class="btn-primary btn-lg">Take a Look</a>
+              </figcaption>
+              <!-- /figcaption -->
+            </figure>
+            <!-- /figure -->
+          </div>
+          <!-- /grid-mask -->
+          <br>
+        </div>
+        <!-- /col -->
+
+        <!-- PORTFOLIO IMAGE 6 -->
+        <div class="col-md-4">
+          <div class="grid mask">
+            <figure>
+              <img class="img-responsive" src="index/img/portfolio/folio06.png" alt="">
+              <figcaption>
+                <h5>PHONE MOCKUP</h5>
+                <a data-toggle="modal" href="#myModal" class="btn-primary btn-lg">Take a Look</a>
+              </figcaption>
+              <!-- /figcaption -->
+            </figure>
+            <!-- /figure -->
+          </div>
+          <!-- /grid-mask -->
+        </div>
+        <!-- /col -->
+        <br>
+      </div>
+      <!-- /row -->
+    </div>
+    <!-- /container -->
+  </div>
+  <!-- /foliowrap -->
+
+	<div class="tlinks">Collect from <a href="http://www.cssmoban.com/" >建站模板</a></div>
+  <section id="blog" name="blog"></section>
+  <div class="container">
+    <div class="row services">
+      <h3>We Are Storytellers</h3>
+      <hr>
+      <br>
+      <br>
+
+      <div class="col-lg-6">
+        <!-- ACCORDION -->
+        <div class="accordion" id="accordion2">
+          <div class="accordion-group">
+            <div class="accordion-heading">
+              <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne">
+                <date>Sep 15, 2013</date>
+                <plus> + </plus> First Class Design
+              </a>
             </div>
-        </section>
-
-        <section class="cta">
-            <div class="cta-content">
-                <div class="container">
-                    <h2>{:__('Do not hesitate')}<br>{:__('Start to act')}</h2>
-                    <a href="https://doc.fastadmin.net/docs/contributing.html" class="btn btn-outline btn-xl page-scroll">{:__('Contribution')}</a>
-                </div>
+            <!-- /accordion-heading -->
+            <div id="collapseOne" class="accordion-body collapse in">
+              <br>
+              <div class="accordion-inner">
+                <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen
+                  book.</p>
+                <p>It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently
+                  with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+                <p>Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old.</p>
+                <p><img class="img-circle" src="index/img/avatar.jpg" height="50px" width="50px"> - <i>Alex Webber.</i></p>
+              </div>
+              <!-- /accordion-inner -->
             </div>
-            <div class="overlay"></div>
-        </section>
+            <!-- /collapse -->
+          </div>
+          <!-- /accordion-group -->
+          <br>
 
-        <footer>
-            <div class="container">
-                <!-- FastAdmin是开源程序，建议在您的网站底部保留一个FastAdmin的链接 -->
-                <p>&copy; 2017-2019 <a href="https://www.fastadmin.net" target="_blank">FastAdmin</a>. All Rights Reserved.</p>
-                <ul class="list-inline">
-                    <li>
-                        <a href="https://gitee.com/karson/fastadmin">{:__('Gitee')}</a>
-                    </li>
-                    <li>
-                        <a href="https://github.com/karsonzhang/fastadmin">{:__('Github')}</a>
-                    </li>
-                    <li>
-                        <a href="https://shang.qq.com/wpa/qunwpa?idkey=46c326e570d0f97cfae1f8257ae82322192ec8841c79b2136446df0b3b62028c">{:__('QQ group')}</a>
-                    </li>
-                </ul>
+          <div class="accordion-group">
+            <div class="accordion-heading">
+              <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseTwo">
+                <date>Sep 10, 2013</date>
+                <plus> + </plus> Retina Ready Theme
+              </a>
             </div>
-        </footer>
+            <div id="collapseTwo" class="accordion-body collapse">
+              <div class="accordion-inner">
+                <p>It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently
+                  with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+              </div>
+              <!-- /accordion-inner -->
+            </div>
+            <!-- /collapse -->
+          </div>
+          <!-- /accordion-group -->
+          <br>
+        </div>
+        <!-- Accordion -->
+      </div>
+      <!-- /col-lg-6 -->
 
-        <!-- jQuery -->
-        <script src=https://cdn.staticfile.org/jquery/2.1.4/jquery.min.js></script>
+      <div class="col-lg-6">
+        <!-- ACCORDION -->
+        <div class="accordion" id="accordion1">
+          <div class="accordion-group">
+            <div class="accordion-heading">
+              <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseThree">
+                <date>Aug 22, 2013</date>
+                <plus> + </plus> We Understand You
+              </a>
+            </div>
+            <!-- /accordion-heading -->
+            <div id="collapseThree" class="accordion-body collapse in">
+              <br>
+              <div class="accordion-inner">
 
-        <!-- Bootstrap Core JavaScript -->
-        <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+                <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen
+                  book.</p>
+                <p>It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently
+                  with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+                <p>Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old.</p>
+                <p><img class="img-circle" src="index/img/avatar02.jpg" height="50px" width="50px"> - <i>Laura Robinson.</i></p>
+              </div>
+              <!-- /accordion-inner -->
+            </div>
+            <!-- /collapse -->
+          </div>
+          <!-- /accordion-group -->
+          <br>
 
-        <!-- Plugin JavaScript -->
-        <script src="https://cdn.staticfile.org/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+          <div class="accordion-group">
+            <div class="accordion-heading">
+              <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseFour">
+                <date>Aug 10, 2013</date>
+                <plus> + </plus> Retina Ready Theme
+              </a>
+            </div>
+            <div id="collapseFour" class="accordion-body collapse">
+              <div class="accordion-inner">
+                <p>It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently
+                  with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+              </div>
+              <!-- /accordion-inner -->
+            </div>
+            <!-- /collapse -->
+          </div>
+          <!-- /accordion-group -->
+          <br>
+        </div>
+        <!-- Accordion -->
+      </div>
+      <!-- /col-lg-6 -->
+    </div>
+    <!-- /row -->
+  </div>
+  <!-- /container -->
 
-        <script>
-            $(function () {
-                $(window).on("scroll", function () {
-                    $("#mainNav").toggleClass("affix", $(window).height() - $(window).scrollTop() <= 50);
-                });
 
-                // 发送版本统计信息，请移除
-                try {
-                    var installed = localStorage.getItem("installed");
-                    if (!installed) {
-                        $.ajax({
-                            url: "{$Think.config.fastadmin.api_url}/statistics/installed",
-                            data: {
-                                version: "{:config('fastadmin.version')}",
-                                os: "{$Think.PHP_OS}",
-                                sapi: "{$Think.PHP_SAPI}",
-                                tpversion: "{$Think.THINK_VERSION}",
-                                phpversion: "{$Think.PHP_VERSION}",
-                                software: "{$Request.server.SERVER_SOFTWARE}",
-                                url: location.href,
-                            },
-                            dataType: 'jsonp',
-                        });
-                        localStorage.setItem("installed", true);
-                    }
-                } catch (e) {
+  <div id="testimonial">
+    <div class="container">
+      <div class="bs-example">
+        <div id="carousel-example-generic" class="carousel slide bs-docs-carousel-example">
+          <ol class="carousel-indicators">
+            <li data-target="#carousel-example-generic" data-slide-to="0" class="active"></li>
+            <li data-target="#carousel-example-generic" data-slide-to="1"></li>
+            <li data-target="#carousel-example-generic" data-slide-to="2"></li>
+          </ol>
+          <div class="carousel-inner">
+            <div class="item active">
+              <h1>Work with Alex was a pleasure. He understood exactly what I wanted and created an awesome site for my company.</h1>
+              <br>
+              <h2>Brad Cooper</h2>
+            </div>
+            <div class="item">
+              <h1>I'm really happy with the results. Get 100% satisfaction is difficult but Alex got it without problems.</h1>
+              <br>
+              <h2>Joan Mathews</h2>
+            </div>
+            <div class="item">
+              <h1>Search no more. Alex is the guy that you need for your next project. Don't waste your time. He's the chosen one.</h1>
+              <br>
+              <h2>Trevor Bishop</h2>
+            </div>
+          </div>
+          <br>
+          <br>
+          <br>
+        </div>
+      </div>
+    </div>
+  </div>
 
-                }
+  <section id="prices" name="prices"></section>
+  <div class="container">
+    <br>
+    <div class="row services">
+      <h3>Pricing Lists</h3>
+      <hr>
+      <br>
+      <br>
+      <div class="col-lg-3">
+        <!-- START PRICING TABLE -->
+        <div class="pricing-option">
+          <div class="pricing-top">
+            <span class="pricing-edition">Starter</span>
+            <span class="price">
+                            <sup>$</sup>
+                            <span class="price-amount">19</span>
+            <small>/mo</small>
+            </span>
+          </div>
+          <ul>
+            <li><strong>10GB</strong> Storage</li>
+            <li>Up to <strong>10</strong> Users</li>
+            <li><strong>5</strong> Domains</li>
+            <li><strong>Free</strong> Setup</li>
+            <li><strong>1-year</strong> Free support *</li>
+          </ul>
+          <a href="index.html#" class="pricing-signup">Sign up</a>
+        </div>
+        <!-- /pricing-option -->
+        <!-- END PRICING TABLE -->
+      </div>
+      <!-- /col -->
 
-            });
-        </script>
+      <div class="col-lg-3">
+        <!-- START PRICING TABLE -->
+        <div class="pricing-option">
+          <div class="pricing-top">
+            <span class="pricing-edition">Standard</span>
+            <span class="price">
+                            <sup>$</sup>
+                            <span class="price-amount">29</span>
+            <small>/mo</small>
+            </span>
+          </div>
+          <ul>
+            <li><strong>20GB</strong> Storage</li>
+            <li>Up to <strong>20</strong> Users</li>
+            <li><strong>10</strong> Domains</li>
+            <li><strong>Free</strong> Setup</li>
+            <li><strong>2-year</strong> Free support *</li>
+          </ul>
+          <a href="index.html#" class="pricing-signup">Sign up</a>
+        </div>
+        <!-- /pricing-option -->
+        <!-- END PRICING TABLE -->
+      </div>
+      <!-- /col -->
 
-        <script>
-            // FastAdmin统计代码，请移除
-            var _hmt = _hmt || [];
-            (function () {
-                var hm = document.createElement("script");
-                hm.src = "https://hm.baidu.com/hm.js?f8d0a8c400404989e195270b0bbf060a";
-                var s = document.getElementsByTagName("script")[0];
-                s.parentNode.insertBefore(hm, s);
-            })();
-        </script>
+      <div class="col-lg-3">
+        <!-- START PRICING TABLE -->
+        <div class="pricing-option">
+          <div class="pricing-top">
+            <span class="special-label">OFFER!</span>
+            <span class="pricing-edition">Ultimate</span>
+            <span class="price">
+                            <sup>$</sup>
+                            <span class="price-amount">69</span>
+            <small>/mo</small>
+            </span>
+          </div>
+          <ul>
+            <li><strong>150GB</strong> Storage</li>
+            <li><strong>Unlimited</strong> Users</li>
+            <li><strong>50</strong> Domains</li>
+            <li><strong>Free</strong> Setup</li>
+            <li><strong>5-year</strong> Free support *</li>
+          </ul>
+          <a href="index.html#" class="pricing-signup">Sign up</a>
+        </div>
+        <!-- /pricing-option -->
+        <!-- END PRICING TABLE -->
+      </div>
+      <!-- /col -->
 
-    </body>
+      <div class="col-lg-3">
+        <!-- START PRICING TABLE -->
+        <div class="pricing-option">
+          <div class="pricing-top">
+            <span class="pricing-edition">Business</span>
+            <span class="price">
+                            <sup>$</sup>
+                            <span class="price-amount">49</span>
+            <small>/mo</small>
+            </span>
+          </div>
+          <!-- /pricing-top -->
+          <ul>
+            <li><strong>40GB</strong> Storage</li>
+            <li>Up to <strong>40</strong> Users</li>
+            <li><strong>25</strong> Domains</li>
+            <li><strong>Free</strong> Setup</li>
+            <li><strong>3-year</strong> Free support *</li>
+          </ul>
+          <a href="index.html#" class="pricing-signup">Sign up</a>
+        </div>
+        <!-- /pricing-option -->
+        <!-- END PRICING TABLE -->
+      </div>
+      <!-- /col -->
+    </div>
+    <!-- /row -->
+  </div>
+  <!-- /container -->
+  
 
+  <div id="copyrights">
+    <div class="container">
+      <p>
+        &copy; Copyrights <strong>© 2017 杭州米友圈科技有限公司</strong>
+      </p>
+      <div class="credits">
+        浙江ICP备16042929号-2
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Libraries -->
+  <script src="index/lib/jquery/jquery.min.js"></script>
+  <script src="index/lib/bootstrap/js/bootstrap.min.js"></script>
+  <script src="index/lib/php-mail-form/validate.js"></script>
+  <script src="index/lib/easing/easing.min.js"></script>
+  <script src="index/lib/classie/classie.js"></script>
+  <script src="index/lib/gnmenu/gnmenu.js"></script>
+
+  <!-- Template Main Javascript File -->
+  <script src="index/js/main.js"></script>
+
+</body>
 </html>

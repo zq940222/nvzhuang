@@ -118,22 +118,18 @@ class Auth
      *
      * @param string $username 用户名
      * @param string $password 密码
-     * @param string $email    邮箱
      * @param string $mobile   手机号
      * @param array  $extend   扩展参数
      * @return boolean
      */
-    public function register($username, $password, $email = '', $mobile = '', $extend = [])
+    public function register($username, $password, $mobile, $agency_id, $real_name, $extend = [])
     {
         // 检测用户名或邮箱、手机号是否存在
         if (User::getByUsername($username)) {
             $this->setError('Username already exist');
             return false;
         }
-        if ($email && User::getByEmail($email)) {
-            $this->setError('Email already exist');
-            return false;
-        }
+
         if ($mobile && User::getByMobile($mobile)) {
             $this->setError('Mobile already exist');
             return false;
@@ -145,21 +141,17 @@ class Auth
         $data = [
             'username' => $username,
             'password' => $password,
-            'email'    => $email,
             'mobile'   => $mobile,
-            'level'    => 1,
-            'score'    => 0,
-            'avatar'   => '',
+            'level_id'    => $agency_id,
+            'avatar'   => $extend['avatar'],
         ];
         $params = array_merge($data, [
-            'nickname'  => $username,
+            'nickname'  => $real_name,
+            'real_name' => $real_name,
             'salt'      => Random::alnum(),
-            'jointime'  => $time,
-            'joinip'    => $ip,
-            'logintime' => $time,
-            'loginip'   => $ip,
-            'prevtime'  => $time,
-            'status'    => 'normal'
+            'createtime'  => $time,
+            'updatetime'  => $time,
+            'status'    => 1
         ]);
         $params['password'] = $this->getEncryptPassword($password, $params['salt']);
         $params = array_merge($params, $extend);
@@ -290,17 +282,17 @@ class Auth
                 $time = time();
 
                 //判断连续登录和最大连续登录
-                if ($user->logintime < \fast\Date::unixtime('day')) {
-                    $user->successions = $user->logintime < \fast\Date::unixtime('day', -1) ? 1 : $user->successions + 1;
-                    $user->maxsuccessions = max($user->successions, $user->maxsuccessions);
-                }
+                // if ($user->logintime < \fast\Date::unixtime('day')) {
+                //     $user->successions = $user->logintime < \fast\Date::unixtime('day', -1) ? 1 : $user->successions + 1;
+                //     $user->maxsuccessions = max($user->successions, $user->maxsuccessions);
+                // }
 
                 $user->prevtime = $user->logintime;
                 //记录本次登录的IP和时间
                 $user->loginip = $ip;
                 $user->logintime = $time;
                 //重置登录失败次数
-                $user->loginfailure = 0;
+                // $user->loginfailure = 0;
 
                 $user->save();
 

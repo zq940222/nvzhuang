@@ -9,7 +9,7 @@ return array (
     'content' => 
     array (
     ),
-    'value' => 'LTAIP6kcpbouEnS0',
+    'value' => 'LTAIS8BVCcDlFqwY',
     'rule' => 'required',
     'msg' => '',
     'tip' => '',
@@ -24,7 +24,7 @@ return array (
     'content' => 
     array (
     ),
-    'value' => 'mYfUADIJk3xcooUr7yPp71C3mBPikx',
+    'value' => 'HZf7aavm9kBihfOZXoG6o6zZYFRMUU',
     'rule' => 'required',
     'msg' => '',
     'tip' => '',
@@ -39,7 +39,7 @@ return array (
     'content' => 
     array (
     ),
-    'value' => '彩虹易享购',
+    'value' => '智光未来系统',
     'rule' => 'required',
     'msg' => '',
     'tip' => '',
@@ -56,7 +56,7 @@ return array (
     ),
     'value' => 
     array (
-      'register' => 'SMS_157255092',
+      'register' => 'SMS_140245012',
     ),
     'rule' => 'required',
     'msg' => '',
