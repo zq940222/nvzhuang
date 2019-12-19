@@ -1,27 +1,27 @@
 <?php
 
-namespace app\admin\controller\user;
+namespace app\admin\controller\general;
 
 use app\common\controller\Backend;
 
 /**
- * 会员管理
+ * 
  *
- * @icon fa fa-user
+ * @icon fa fa-circle-o
  */
-class User extends Backend
+class Feedback extends Backend
 {
     
     /**
-     * User模型对象
-     * @var \app\admin\model\User
+     * Feedback模型对象
+     * @var \app\admin\model\Feedback
      */
     protected $model = null;
 
     public function _initialize()
     {
         parent::_initialize();
-        $this->model = new \app\admin\model\User;
+        $this->model = new \app\admin\model\Feedback;
         $this->view->assign("statusList", $this->model->getStatusList());
     }
     
