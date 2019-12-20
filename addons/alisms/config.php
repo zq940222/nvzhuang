@@ -9,7 +9,7 @@ return array (
     'content' => 
     array (
     ),
-    'value' => 'LTAIS8BVCcDlFqwY',
+    'value' => 'LTAI4FxejABYZwTYaeYLssuY',
     'rule' => 'required',
     'msg' => '',
     'tip' => '',
@@ -24,7 +24,7 @@ return array (
     'content' => 
     array (
     ),
-    'value' => 'HZf7aavm9kBihfOZXoG6o6zZYFRMUU',
+    'value' => 'NbEO2Zup6kNTfr8yhVJthM034O4dbt',
     'rule' => 'required',
     'msg' => '',
     'tip' => '',
@@ -39,7 +39,7 @@ return array (
     'content' => 
     array (
     ),
-    'value' => '智光未来系统',
+    'value' => '思聪女装',
     'rule' => 'required',
     'msg' => '',
     'tip' => '',
@@ -56,7 +56,8 @@ return array (
     ),
     'value' => 
     array (
-      'register' => 'SMS_140245012',
+      'register' => 'SMS_180950782',
+      'resetpwd' => 'SMS_180950782',
     ),
     'rule' => 'required',
     'msg' => '',

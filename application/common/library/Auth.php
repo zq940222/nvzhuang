@@ -249,7 +249,8 @@ class Auth
             try {
                 $salt = Random::alnum();
                 $newpassword = $this->getEncryptPassword($newpassword, $salt);
-                $this->_user->save(['loginfailure' => 0, 'password' => $newpassword, 'salt' => $salt]);
+                $this->_user->save(['password' => $newpassword, 'salt' => $salt]);
+                // $this->_user->save(['loginfailure' => 0, 'password' => $newpassword, 'salt' => $salt]);
 
                 Token::delete($this->_token);
                 //修改密码成功的事件

@@ -14,7 +14,7 @@ use think\Session;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login', 'mobilelogin', 'register', 'resetpwd', 'changeemail', 'changemobile', 'third', 'apply_info','apply_agent'];
+    protected $noNeedLogin = ['login', 'register', 'resetpwd', 'changemobile', 'apply_info', 'apply_agent', 'get_http_host'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -24,7 +24,7 @@ class User extends Api
 
     public function get_http_host()
     {
-        $this->success('请求成功', $this->request->server()['HTTP_HOST']);
+        $this->success('请求成功', ['HTTP_HOST'=>$this->request->server()['HTTP_HOST']]);
     }
     /**
      * 获取代理申请基本信息
@@ -166,6 +166,14 @@ class User extends Api
         $ret = $this->auth->register($username, $password, $mobile, $agency_id, $real_name, $extend);
         if ($ret) {
             $data = ['userinfo' => $this->auth->getUserinfo()];
+            $user_bounty = array();
+            $user_bounty['user_id'] = $data['superior_id'];
+            $user_bounty['sub_id'] = $data['userinfo']['id'];
+            $user_bounty['sub_level'] = $data['agency_id'];
+            $user_bounty['money'] = db('level')->where('id='.$data['agency_id'])->value('bonus');
+            $user_bounty['createtime'] = time();
+            db('user_bounty')->insert($user_bounty);
+
             $this->success(__('Sign up successful'), $data);
         } else {
             $this->error($this->auth->getError());
@@ -206,32 +214,65 @@ class User extends Api
     }
 
     /**
+     * 重置密码
+     *
+     * @param string $mobile      手机号
+     * @param string $newpassword 新密码
+     * @param string $captcha     验证码
+     */
+    public function resetpwd()
+    {
+        $mobile = $this->request->request("mobile");
+        $newpassword = $this->request->request("newpassword");
+        $captcha = $this->request->request("captcha");
+        if (!$newpassword || !$captcha) {
+            $this->error(__('Invalid parameters'));
+        }
+
+        if (!Validate::regex($mobile, "^1\d{10}$")) {
+            $this->error(__('Mobile is incorrect'));
+        }
+        $user = \app\common\model\User::getByMobile($mobile);
+        if (!$user) {
+            $this->error(__('User not found'));
+        }
+        $ret = Sms::check($mobile, $captcha, 'resetpwd');
+        if (!$ret) {
+            $this->error(__('Captcha is incorrect'));
+        }
+        Sms::flush($mobile, 'resetpwd');
+
+        //模拟一次登录
+        $this->auth->direct($user->id);
+        $ret = $this->auth->changepwd($newpassword, '', true);
+        if ($ret) {
+            $this->success(__('Reset password successful'));
+        } else {
+            $this->error($this->auth->getError());
+        }
+    }
+
+    /**
      * 修改会员个人信息
      *
      * @param string $avatar   头像地址
-     * @param string $username 用户名
      * @param string $nickname 昵称
-     * @param string $bio      个人简介
      */
     public function profile()
     {
         $user = $this->auth->getUser();
-        $username = $this->request->request('username');
         $nickname = $this->request->request('nickname');
-        $bio = $this->request->request('bio');
         $avatar = $this->request->request('avatar', '', 'trim,strip_tags,htmlspecialchars');
-        if ($username) {
-            $exists = \app\common\model\User::where('username', $username)->where('id', '<>', $this->auth->id)->find();
+        if ($nickname) {
+            $exists = \app\common\model\User::where('nickname', $nickname)->where('id', '<>', $this->auth->id)->find();
             if ($exists) {
-                $this->error(__('Username already exists'));
+                $this->error(__('nickname already exists'));
             }
-            $user->username = $username;
+            $user->nickname = $nickname;
         }
-        $user->nickname = $nickname;
-        $user->bio = $bio;
         $user->avatar = $avatar;
         $user->save();
-        $this->success();
+        $this->success('修改成功');
     }
 
     /**
@@ -267,58 +308,29 @@ class User extends Api
         Sms::flush($mobile, 'changemobile');
         $this->success();
     }
-
     /**
-     * 重置密码
+     * 修改手机号
      *
-     * @param string $mobile      手机号
-     * @param string $newpassword 新密码
-     * @param string $captcha     验证码
+     * @param string $user_id 用户id
+     * @param string $content 反馈内容
      */
-    public function resetpwd()
+    public function user_feedback()
     {
-        $type = $this->request->request("type");
-        $mobile = $this->request->request("mobile");
-        $email = $this->request->request("email");
-        $newpassword = $this->request->request("newpassword");
-        $captcha = $this->request->request("captcha");
-        if (!$newpassword || !$captcha) {
+        $user_id = $this->request->request('user_id');
+        $content = $this->request->request('content');
+        if (!$user_id || !$content) {
             $this->error(__('Invalid parameters'));
         }
-        if ($type == 'mobile') {
-            if (!Validate::regex($mobile, "^1\d{10}$")) {
-                $this->error(__('Mobile is incorrect'));
-            }
-            $user = \app\common\model\User::getByMobile($mobile);
-            if (!$user) {
-                $this->error(__('User not found'));
-            }
-            $ret = Sms::check($mobile, $captcha, 'resetpwd');
-            if (!$ret) {
-                $this->error(__('Captcha is incorrect'));
-            }
-            Sms::flush($mobile, 'resetpwd');
-        } else {
-            if (!Validate::is($email, "email")) {
-                $this->error(__('Email is incorrect'));
-            }
-            $user = \app\common\model\User::getByEmail($email);
-            if (!$user) {
-                $this->error(__('User not found'));
-            }
-            $ret = Ems::check($email, $captcha, 'resetpwd');
-            if (!$ret) {
-                $this->error(__('Captcha is incorrect'));
-            }
-            Ems::flush($email, 'resetpwd');
-        }
-        //模拟一次登录
-        $this->auth->direct($user->id);
-        $ret = $this->auth->changepwd($newpassword, '', true);
-        if ($ret) {
-            $this->success(__('Reset password successful'));
-        } else {
-            $this->error($this->auth->getError());
+        $data['user_id'] = $user_id;
+        $data['content'] = $content;
+        $data['createtime'] = time();
+        $res = db('feedback')->insert($data);
+        if(!empty($res)){
+            $this->success('提交成功', null, 1);
+        }else{
+            $this->error('提交失败', null, -1);
         }
     }
+
+
 }
