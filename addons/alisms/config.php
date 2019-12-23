@@ -57,7 +57,7 @@ return array (
     'value' => 
     array (
       'register' => 'SMS_180950782',
-      'resetpwd' => 'SMS_180950782',
+      'resetpwd' => 'SMS_180960779',
     ),
     'rule' => 'required',
     'msg' => '',

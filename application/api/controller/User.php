@@ -14,7 +14,7 @@ use think\Session;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login', 'register', 'resetpwd', 'changemobile', 'apply_info', 'apply_agent', 'get_http_host'];
+    protected $noNeedLogin = ['login', 'register', 'resetpwd', 'changemobile', 'apply_info', 'apply_agent', 'get_http_host','upgrade'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -308,8 +308,9 @@ class User extends Api
         Sms::flush($mobile, 'changemobile');
         $this->success();
     }
+
     /**
-     * 修改手机号
+     * 用户反馈
      *
      * @param string $user_id 用户id
      * @param string $content 反馈内容
@@ -331,6 +332,123 @@ class User extends Api
             $this->error('提交失败', null, -1);
         }
     }
+
+    /**
+     * 用户升级申请
+     *
+     * @param string $user_id 用户id
+     * @param string $pre_level 之前代理等级
+     * @param string $level 升级代理等级
+     * @param string $pay_type 打款方式:1=支付宝,2=银行转账
+     * @param string $money 付款金额
+     * @param string $bank_account 银行卡号/支付宝账号
+     * @param string $pay_time 付款日期
+     * @param string $remark 备注
+     * @param string $pay_certificate_images 打款凭证
+     */
+    public function user_upgrade()
+    {
+        $data['user_id'] = $this->request->request('user_id');
+        $data['pre_level'] = $this->request->request('pre_level');
+        $data['level'] = $this->request->request('level');
+        $data['pay_type'] = $this->request->request('pay_type');
+        $data['money'] = $this->request->request('money');
+        $data['bank_account'] = $this->request->request('bank_account');
+        $data['pay_time'] = $this->request->request('pay_time');
+        $data['remark'] = $this->request->request('remark');
+        $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
+        foreach ($data as $key => $value) {
+            if(!$value) {
+                if($key == 'remark') continue;
+                $this->error(__('无效的参数 : '.$key), null, -1);
+            }
+        }
+        $agent_upgrade = db('agent_upgrade')->where('user_id='.$data['user_id'])->find();
+        if(!empty($agent_upgrade) && $agent_upgrade['status'] == 0) {
+            $this->error(__('暂时无法提交，有未审核申请'), null, -3);
+        }
+        $data['createtime'] = time();
+        $res = db('agent_upgrade')->insert($data);
+        if($res) {
+            $this->success('提交成功');
+        }else{
+            $this->success('创建数据是败', $res, -2);
+        }
+
+    }
+    /**
+     * 申请成功操作
+     *
+     * @param string $id 申请表主键id
+     */
+    public function upgrade()
+    {
+        $id = $this->request->request('id');
+        $upgrade = db('agent_upgrade')->where('id='.$id)->find();
+        $user = db('user')->where('id='.$upgrade['user_id'])->find();
+        $level = db('level')->where('id='.$upgrade['level'])->find();
+        // 1.将货款和保证金加到用户数据里
+        db('user')->where('user_id='.$upgrade['user_id'])->setInc('goods_payment', $level['goods_payment']);
+        db('user')->where('user_id='.$upgrade['user_id'])->setInc('margin', $level['margin']);
+        // 2.修改用户等级 并判断当前代理等级是否大于上级用户代理等级 如果大于将上级id变为原上级的上级id
+        $edit_user_data['level'] = $upgrade['level'];
+        if($user['superior_id'] > 0) {
+            $parent_user = db('user')->where('id='.$user['superior_id'])->find();
+            if($parent_user['level_id'] >= $user['level_id']) {
+                $edit_user_data['superior_id'] = $parent_user['superior_id'];
+            } 
+        }
+        
+        $res = db('user')->where('user_id='.$upgrade['user_id'])->update($edit_user_data);
+
+        if($res) {
+            $this->success('修改成功');
+        }else{
+            $this->error('修改失败');
+        }
+
+    }
+    /**
+     * 获取代理升级基本信息
+     *
+     * @param int $user_id  用户id
+     */
+    public function upgrade_info()
+    {
+        $user_id = $this->request->request('user_id');
+        if(!$user_id) {
+            $this->error(__('无效的参数 : user_id'), null, -1);
+        }
+        $level = db('user')->where('id='.$user_id)->value('level_id');
+
+        $pay_config = db('config')
+        ->field('name as "key",title,value')
+        ->where('`group`="pay"')
+        ->select();
+        $pay_info = Config::getArrayData($pay_config);
+
+        unset($pay_info['company_address']);
+        unset($pay_info['company_phone']);
+        unset($pay_info['company_name']);
+
+        $level_info = db('level')
+        ->select();
+        foreach ($level_info as $key => $value) {
+            if($level_info[$key]['id'] == $level) {
+                $now_level_info = $value;
+            }
+            if($level_info[$key]['id'] >= $level) {
+                unset($level_info[$key]);
+            }
+        }
+        
+        $data['now_level_info'] = $now_level_info;
+        $data['pay_info'] = $pay_info;
+        $data['level_info'] = $level_info;
+
+        $this->success('请求成功', $data);
+    }
+
 
 
 }
