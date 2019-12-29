@@ -14,7 +14,7 @@ use think\Session;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login', 'register', 'resetpwd', 'changemobile', 'apply_info', 'apply_agent', 'get_http_host','upgrade'];
+    protected $noNeedLogin = ['login', 'register', 'resetpwd', 'changemobile', 'apply_info', 'apply_agent', 'get_http_host', 'upgrade', 'pay_info'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -22,9 +22,20 @@ class User extends Api
         parent::_initialize();
     }
 
+    public function get_user_info()
+    {
+        $user_id = $this->request->request('user_id');
+        $user = db('user')
+        ->field('id,username,nickname,mobile,avatar,level_id,superior_id,inviter_id,money,goods_payment,margin,logintime,prevtime')
+        ->where('id='.$user_id)
+        ->find();
+        if(!empty($user['avatar'])) $user['avatar'] = get_http_host($user['avatar']);
+        $this->success('请求成功', $user);
+    }
+
     public function get_http_host()
     {
-        $this->success('请求成功', ['HTTP_HOST'=>$this->request->server()['HTTP_HOST']]);
+        $this->success('请求成功', get_http_host(''));
     }
     /**
      * 获取代理申请基本信息
@@ -196,6 +207,7 @@ class User extends Api
         $ret = $this->auth->login($account, $password);
         if ($ret) {
             $userinfo = $this->auth->getUserinfo();
+            if(!empty($userinfo['avatar'])) $userinfo['avatar'] = get_http_host($userinfo['avatar']);
             $data = ['userinfo' => $userinfo];
             Session::set($account, $userinfo);
             $this->success(__('Logged in successful'), $data);
@@ -421,16 +433,6 @@ class User extends Api
         }
         $level = db('user')->where('id='.$user_id)->value('level_id');
 
-        $pay_config = db('config')
-        ->field('name as "key",title,value')
-        ->where('`group`="pay"')
-        ->select();
-        $pay_info = Config::getArrayData($pay_config);
-
-        unset($pay_info['company_address']);
-        unset($pay_info['company_phone']);
-        unset($pay_info['company_name']);
-
         $level_info = db('level')
         ->select();
         foreach ($level_info as $key => $value) {
@@ -443,12 +445,122 @@ class User extends Api
         }
         
         $data['now_level_info'] = $now_level_info;
-        $data['pay_info'] = $pay_info;
+        $data['pay_info'] = $this->pay_info();
         $data['level_info'] = $level_info;
 
         $this->success('请求成功', $data);
     }
 
+    /**
+     * 货款充值记录
+     *
+     * @param int $user_id  用户id
+     * @param int $status  状态:-2=全部,0=待审核,1=成功,-1=未通过
+     */
+    public function recharge_list()
+    {
+        $user_id = $this->request->request('user_id');
+        $status = $this->request->request('status');
+        if(!$user_id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+        
+        $field = 'pay_type,bank_account,money,recharge_time,createtime,status';
+        $where = 'user_id='.$user_id;
+        if(empty($status)) $status = -2;
+        if($status > -2) $where .= ' and status='.$status;
 
+        // $data['goods_payment'] = db('user')->where('id='.$user_id)->value('goods_payment');
+        $data = db('user_recharge')
+        ->field($field)
+        ->where($where)
+        ->select();
+
+        $this->success('请求成功', $data);
+    }
+
+    /**
+     * 货款充值申请
+     *
+     * @param string $user_id 用户id
+     * @param string $pay_type 打款方式:1=支付宝,2=银行转账
+     * @param string $money 付款金额
+     * @param string $bank_account 银行卡号/支付宝账号
+     * @param string $recharge_time 付款日期
+     * @param string $remark 备注
+     * @param string $pay_certificate_images 打款凭证
+     */
+    public function recharge_apply()
+    {
+        $data['user_id'] = $this->request->request('user_id');
+        $data['pay_type'] = $this->request->request('pay_type');
+        $data['money'] = $this->request->request('money');
+        $data['bank_account'] = $this->request->request('bank_account');
+        $data['recharge_time'] = $this->request->request('recharge_time');
+        $data['remake'] = $this->request->request('remake');
+        $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
+        foreach ($data as $key => $value) {
+            if(!$value) {
+                if($key == 'remake') continue;
+                $this->error(__('无效的参数 : '.$key), null, -1);
+            }
+        }
+        $data['createtime'] = time();
+        $res = db('user_recharge')->insert($data);
+        if($res) {
+            $this->success('提交成功,请等待审核');
+        }else{
+            $this->success('创建数据是败', $res, -2);
+        }
+    }
+
+    /**
+     * 货款充值申请审核成功操作
+     *
+     * @param string $id 数据id
+     */
+    public function recharge_apply_success()
+    {
+        $id = $this->request->request('id');
+        if(!$id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+
+        $data = db('user_recharge')
+        ->where('id='.$id)
+        ->find();
+        if(empty($data)) {
+            $this->error(__('无效的参数'), null, -1);
+        }else{
+            $res = db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $data['money']);
+
+            if($res) {
+                $this->success('成功',null,1);
+            }else{
+                $this->error('失败',null,-2);
+            }
+        }
+    }
+
+    /**
+     * 获取打款信息
+     *
+     * @param int $user_id  用户id
+     * @param int $status  状态:-2=全部,0=待审核,1=成功,-1=未通过
+     */
+    public function pay_info()
+    {
+        $pay_config = db('config')
+        ->field('name as "key",title,value')
+        ->where('`group`="pay"')
+        ->select();
+        $pay_info = Config::getArrayData($pay_config);
+
+        unset($pay_info['company_address']);
+        unset($pay_info['company_phone']);
+        unset($pay_info['company_name']);
+
+        $this->success('请求成功', $pay_info);
+    }
 
 }
