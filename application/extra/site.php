@@ -26,6 +26,7 @@ return array (
     'dictionary' => 'Dictionary',
     'user' => 'User',
     'pay' => '打款配置',
+    'refund' => '退货配置',
   ),
   'mail_type' => '1',
   'mail_smtp_host' => 'smtp.qq.com',
@@ -42,4 +43,7 @@ return array (
   'company_name' => '阿里巴巴',
   'company_phone' => '010-000111222',
   'company_address' => '杭州阿里巴巴',
+  'refund_address' => '阿里巴巴',
+  'refund_consignee' => '马云',
+  'refund_mobile' => '123456',
 );

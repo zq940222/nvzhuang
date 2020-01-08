@@ -1,0 +1,30 @@
+<form id="detail-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+    <input type="hidden" name="goods_id" value="{$row['id']}">
+    <table class="table table-bordered" id="goods_spec_table1">
+        <tr>
+            <td colspan="2"><b>商品规格:</b></td>
+        </tr>
+        {foreach name="specList" item="vo" key="k"}
+        <tr>
+            <td>{$vo['name']}:</td>
+            <td>
+                {foreach name="vo['spec_item']" item="vo2" key="k2"}
+                <button type="button" data-spec_id='{$vo["id"]}' data-item_id='{$vo2["id"]}'
+                        class='btn {if condition="in_array($vo2.id,$items_ids)"}btn-success{/if}'>
+                    {$vo2["item"]}
+                </button>
+                {/foreach}
+            </td>
+        </tr>
+        {/foreach}
+    </table>
+    <div id="goods_spec_table2"> <!--ajax 返回 规格对应的库存--> </div>
+    <div class="form-group layer-footer">
+        <label class="control-label col-xs-12 col-sm-2"></label>
+        <div class="col-xs-12 col-sm-8">
+            <button type="submit" class="btn btn-success btn-embossed disabled">{:__('OK')}</button>
+            <button type="reset" class="btn btn-default btn-embossed">{:__('Reset')}</button>
+        </div>
+    </div>
+</form>
+
