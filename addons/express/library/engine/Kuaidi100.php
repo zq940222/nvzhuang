@@ -48,7 +48,7 @@ class Kuaidi100 extends Server
         if (!$shipper_code) {
 
             $data = Http::get($this->codeURL . $express_id);
-            $data = json_decode($data);
+            $data = json_decode($data,true);
             if (!isset($data[0]) || !isset($data[0]->comCode)) {
                 $this->error = "获取快递100物流代码错误";
                 return false;
