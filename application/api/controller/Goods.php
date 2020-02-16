@@ -3,6 +3,7 @@
 namespace app\api\controller;
 
 use app\common\controller\Api;
+use think\Config;
 
 /**
  * 商品接口
@@ -15,7 +16,7 @@ class Goods extends Api
     //如果接口已经设置无需登录,那也就无需鉴权了
     //
     // 无需登录的接口,*表示全部
-    protected $noNeedLogin = ['goods_list'];
+    protected $noNeedLogin = ['goods_list','cate_list','goods_desc'];
     // 无需鉴权的接口,*表示全部
     protected $noNeedRight = '*';
 
@@ -57,7 +58,7 @@ class Goods extends Api
 
         $level = db('user')->where('id='.$user_id)->value('level_id');
 
-        $field = 'id,goods_sn,name,cover_image,price,price'.$level;
+        $field = 'id as goods_id,goods_sn,name,cover_image,price,price'.$level.' as lprice';
         $where = 'is_on_sale=1';
         $order = ['weigh'=>'asc'];
 
@@ -89,13 +90,124 @@ class Goods extends Api
         ->order($order)
         ->limit($start, $count)
         ->select();
+        foreach ($data as $key => $value) {
+            if(!empty($data[$key]['cover_image'])) $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
+        }
 
         $this->success('请求成功', $data);
 
     }
 
+    /**
+     * 商品详情
+     *
+     * @param int $user_id  用户id
+     */
+    public function goods_desc()
+    {
+        $user_id = $this->request->request('user_id');
+        $goods_id = $this->request->request('goods_id');
 
+        if (!$user_id) {
+            $this->error(__('用户ID不能为空'), null, -1);
+        }
 
+        $level = db('user')->where('id='.$user_id)->value('level_id');
+
+        $field = 'id as goods_id,goods_sn,name,cover_image,goods_images,price,price'.$level.' as lprice,goods_content,store_count';
+        $where = 'is_on_sale=1 and id='.$goods_id;
+
+        $goods = db('goods')
+        ->field($field)
+        ->where($where)
+        ->find();
+        if(!empty($goods['cover_image'])) $goods['cover_image'] = get_http_host($goods['cover_image']);
+        if(!empty($goods['goods_images'])) {
+            $goods_images = explode(',', $goods['goods_images']);
+            foreach ($goods_images as $key => $value) {
+                $goods_images[$key] = get_http_host($value);
+            }
+            $goods['goods_images'] = $goods_images;
+        }
+
+        $spec_field = 'id as group_id,goods_id,key,key_name,price,price'.$level.' as lprice,store_count,spec_image';
+
+        $spec_goods_price = db('spec_goods_price')
+        ->field($spec_field)
+        ->where('goods_id='.$goods['goods_id'])
+        ->select();
+        foreach ($spec_goods_price as $key => $value) {
+            if(!empty($spec_goods_price[$key]['spec_image'])) $spec_goods_price[$key]['spec_image'] = get_http_host($spec_goods_price[$key]['spec_image']);
+        }
+
+        $spec_ids = db('spec_item a')
+        ->join('spec b','a.spec_id=b.id')
+        ->field('a.spec_id')
+        ->where('a.goods_id='.$goods_id)
+        ->group('a.spec_id')
+        ->select();
+        $spec_data = array();
+        foreach ($spec_ids as $key => $value) {
+            $spec_data[$key]['spec_id'] = $value['spec_id'];
+            $spec_data[$key]['spec_name'] = db('spec')
+            ->where('id='.$value['spec_id'])
+            ->value('name');
+            $spec_item = db('spec_item')
+            ->field('id,item,item_img')
+            ->where('goods_id='.$goods_id.' and spec_id='.$value['spec_id'])
+            ->order('weigh','asc')
+            ->select();
+            if(!empty($spec_item)) {
+                foreach ($spec_item as $key1 => $value1) {
+                    if(!empty($spec_item[$key1]['item_img'])) {
+                        $spec_item[$key1]['item_img'] = get_http_host($spec_item[$key1]['item_img']);
+                    }
+                }
+            }
+            $spec_data[$key]['spec_data'] = $spec_item;
+        }
+        $data['goods'] = $goods;
+        $data['goods_spec_data']['spec'] = $spec_data;
+        $data['goods_spec_data']['group'] = $spec_goods_price;
+
+        $this->success('请求成功', $data);
+
+    }
+
+    /**
+     * 分类树
+     */
+    public function cate_list()
+    {
+        $data = array();
+        $site = Config::get('site.categorytype');
+        ksort($site);
+        foreach ($site as $key => $value) {
+            $cate = array();
+            $cat_name = $value;
+            $cat_data = db('category')
+            ->field('id as '.$key.'_id,name')
+            ->where('pid=0 and type="'.$key.'"')
+            ->order('weigh','asc')
+            ->select();
+            if($key == 'style') {
+                foreach ($cat_data as $keys => $values) {
+                    $cat_data[$keys]['child'] = db('category')
+                    ->field('id as '.$key.'_id,name')
+                    ->where('pid='.$cat_data[$keys][$key.'_id'].' and type="'.$key.'"')
+                    ->order('weigh','asc')
+                    ->select();
+                }
+            }
+            if(!empty($cat_data)) {
+                $cate['cat_name'] = $cat_name;
+                $cate['cat_data'] = $cat_data;
+                $data[] = $cate;
+            }
+            
+        }
+        $this->success('请求成功', $data);
+    }
 
 
 

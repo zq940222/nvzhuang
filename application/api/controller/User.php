@@ -8,13 +8,14 @@ use app\common\library\Sms;
 use fast\Random;
 use think\Validate;
 use think\Session;
+use think\Db;
 
 /**
  * 会员接口
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login', 'register', 'resetpwd', 'changemobile', 'apply_info', 'apply_agent', 'get_http_host', 'upgrade', 'pay_info'];
+    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -29,6 +30,7 @@ class User extends Api
         ->field('id,username,nickname,mobile,avatar,level_id,superior_id,inviter_id,money,goods_payment,margin,logintime,prevtime')
         ->where('id='.$user_id)
         ->find();
+        $user['level_name'] = db('level')->where('id='.$user['level_id'])->value('nickname');
         if(!empty($user['avatar'])) $user['avatar'] = get_http_host($user['avatar']);
         $this->success('请求成功', $user);
     }
@@ -161,7 +163,14 @@ class User extends Api
         $real_name = $data['name'];
 
         $extend['avatar'] = $data['avatar']; //头像
-        $extend['superior_id'] = $data['superior_id']; //上级ID
+        //如果邀请人的等级没有用户等级高 那么将用户挂在邀请人的上级的下面
+        $p_user = db('user')->where('id='.$data['superior_id'])->find();
+        if($agency_id <= $p_user['level_id']) {
+            $extend['superior_id'] = $p_user['superior_id'];
+        }else{
+            $extend['superior_id'] = $data['superior_id']; //上级ID
+        }
+        
         $extend['inviter_id'] = $data['superior_id']; //推荐人ID
         $level = db('level')->where('id='.$agency_id)->find();
         $extend['goods_payment'] = $level['goods_payment']; //货款
@@ -184,6 +193,31 @@ class User extends Api
             $user_bounty['money'] = db('level')->where('id='.$data['agency_id'])->value('bonus');
             $user_bounty['createtime'] = time();
             db('user_bounty')->insert($user_bounty);
+
+            /*添加流水记录*/
+            $money_log_1['user_id'] = $data['userinfo']['id'];
+            $money_log_1['type'] = 1;
+            $money_log_1['money'] = $extend['goods_payment'];
+            $money_log_1['memo'] = '注册货款';
+            $money_log_1['createtime'] = time();
+            $money_log[] = $money_log_1;
+
+            $money_log_2['user_id'] = $data['userinfo']['id'];
+            $money_log_2['type'] = 1;
+            $money_log_2['money'] = $extend['margin'];
+            $money_log_2['memo'] = '保证金';
+            $money_log_2['createtime'] = time();
+            $money_log[] = $money_log_2;
+
+            $money_log_3['user_id'] = $data['superior_id'];
+            $money_log_3['type'] = 1;
+            $money_log_3['money'] = $user_bounty['money'];
+            $money_log_3['memo'] = '奖励金';
+            $money_log_3['createtime'] = time();
+            $money_log[] = $money_log_3;
+
+            db('user_money_log')->insertAll($money_log);
+            /*添加流水记录*/
 
             $this->success(__('Sign up successful'), $data);
         } else {
@@ -402,11 +436,29 @@ class User extends Api
         // 1.将货款和保证金加到用户数据里
         db('user')->where('user_id='.$upgrade['user_id'])->setInc('goods_payment', $level['goods_payment']);
         db('user')->where('user_id='.$upgrade['user_id'])->setInc('margin', $level['margin']);
+        /*添加流水记录*/
+        $money_log_1['user_id'] = $upgrade['user_id'];
+        $money_log_1['type'] = 1;
+        $money_log_1['money'] = $level['goods_payment'];
+        $money_log_1['memo'] = '货款';
+        $money_log_1['createtime'] = time();
+        $money_log[] = $money_log_1;
+
+        $money_log_2['user_id'] = $upgrade['user_id'];
+        $money_log_2['type'] = 1;
+        $money_log_2['money'] = $level['margin'];
+        $money_log_2['memo'] = '保证金';
+        $money_log_2['createtime'] = time();
+        $money_log[] = $money_log_2;
+
+        db('user_money_log')->insertAll($money_log);
+        /*添加流水记录*/        
+
         // 2.修改用户等级 并判断当前代理等级是否大于上级用户代理等级 如果大于将上级id变为原上级的上级id
         $edit_user_data['level'] = $upgrade['level'];
         if($user['superior_id'] > 0) {
             $parent_user = db('user')->where('id='.$user['superior_id'])->find();
-            if($parent_user['level_id'] >= $user['level_id']) {
+            if($parent_user['level_id'] >= $upgrade['level']) {
                 $edit_user_data['superior_id'] = $parent_user['superior_id'];
             } 
         }
@@ -487,7 +539,7 @@ class User extends Api
      * @param string $money 付款金额
      * @param string $bank_account 银行卡号/支付宝账号
      * @param string $recharge_time 付款日期
-     * @param string $remark 备注
+     * @param string $remake 备注
      * @param string $pay_certificate_images 打款凭证
      */
     public function recharge_apply()
@@ -532,9 +584,221 @@ class User extends Api
         if(empty($data)) {
             $this->error(__('无效的参数'), null, -1);
         }else{
+            if($data['status'] != 0) {
+                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+            }
             $res = db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $data['money']);
-
+            $level_id = db('user')->where('id='.$data['user_id'])->value('level_id');
+            $experience = db('level')->where('id='.$level_id)->value('experience');
+            if($experience > 0){
+                $money_log_3['user_id'] = $data['user_id'];
+                $money_log_3['type'] = 1;
+                $money_log_3['money'] = $experience;
+                $money_log_3['memo'] = '体验金';
+                $money_log_3['createtime'] = time();
+                $money_log[] = $money_log_3;
+                db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $experience);
+            }
+            if($data['money'] > 9800) {
+                $money_log_2['user_id'] = $data['user_id'];
+                $money_log_2['type'] = 1;
+                $money_log_2['money'] = 200;
+                $money_log_2['memo'] = '体验金';
+                $money_log_2['createtime'] = time();
+                $money_log[] = $money_log_2;
+                db('user')->where('id='.$data['user_id'])->setInc('goods_payment', 200);
+            }
             if($res) {
+                db('user_recharge')->where('id='.$data['id'])->setField('status',1);
+                /*添加流水记录*/
+                $money_log_1['user_id'] = $data['user_id'];
+                $money_log_1['type'] = 1;
+                $money_log_1['money'] = $data['money'];
+                $money_log_1['memo'] = '货款';
+                $money_log_1['createtime'] = time();
+                $money_log[] = $money_log_1;
+                db('user_money_log')->insertAll($money_log);
+                /*添加流水记录*/
+                $this->success('成功',null,1);
+            }else{
+                $this->error('失败',null,-2);
+            }
+        }
+    }
+
+    /**
+     * 货款充值申请审核失败操作
+     *
+     * @param string $id 数据id
+     */
+    public function recharge_apply_error()
+    {
+        $id = $this->request->request('id');
+        if(!$id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+
+        $data = db('user_recharge')
+        ->where('id='.$id)
+        ->find();
+        if(empty($data)) {
+            $this->error(__('无效的参数'), null, -1);
+        }else{
+            if($data['status'] != 0) {
+                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+            }
+            db('user_recharge')->where('id='.$data['id'])->setField('status',-1);
+            $this->success('成功',null,1);
+        }
+    }
+
+    /**
+     * 提现记录
+     *
+     * @param int $user_id  用户id
+     * @param int $status  状态:-2=全部,0=待审核,1=成功,-1=未通过
+     */
+    public function withdraw_list()
+    {
+        $user_id = $this->request->request('user_id');
+        $status = $this->request->request('status');
+        if(!$user_id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+        
+        $field = 'bank_account,money,createtime,status';
+        $where = 'user_id='.$user_id;
+        if(empty($status)) $status = -2;
+        if($status > -2) $where .= ' and status='.$status;
+
+        $data = db('user_withdraw')
+        ->field($field)
+        ->where($where)
+        ->order('createtime','desc')
+        ->select();
+
+        $this->success('请求成功', $data);
+    }
+
+    /**
+     * 提现申请
+     *
+     * @param int $user_id 用户id
+     * @param string $bank_name 银行名称
+     * @param string $branch_name 支行名称
+     * @param string $name 开户姓名
+     * @param string $bank_account 银行卡号
+     * @param string $money 提现金额
+     */
+    public function withdraw_apply()
+    {
+        $data['user_id'] = $this->request->request('user_id');
+        $data['bank_name'] = $this->request->request('bank_name');
+        $data['branch_name'] = $this->request->request('branch_name');
+        $data['name'] = $this->request->request('name');
+        $data['bank_account'] = $this->request->request('bank_account');
+        $data['money'] = $this->request->request('money');
+        foreach ($data as $key => $value) {
+            if(!$value) {
+                $this->error(__('无效的参数 : '.$key), null, -1);
+            }
+        }
+        if($data['money'] < 100) {
+            $this->error('提现金额不可小于100', null, -4);
+        }
+        $money = db('user')->where('id='.$data['user_id'])->value('money');
+        if($money - $data['money'] < 0) {
+            $this->error('余额不足', null, -3);
+        }
+        db('user')->where('id='.$data['user_id'])->setDec('money',$data['money']);
+        db('user')->where('id='.$data['user_id'])->setInc('lock_money',$data['money']);
+
+        $data['createtime'] = time();
+        $res = db('user_withdraw')->insert($data);
+        if($res) {
+            $this->success('提交成功,请等待审核');
+        }else{
+            $this->error('创建数据是败', $res, -2);
+        }
+    }
+
+    /**
+     * 提现申请审核成功操作
+     * @param string $id 数据id
+     */
+    public function withdraw_apply_success()
+    {
+        $id = $this->request->request('id');
+        if(!$id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+
+        $data = db('user_withdraw')
+        ->where('id='.$id)
+        ->find();
+        if(empty($data)) {
+            $this->error(__('无效的参数'), null, -1);
+        }else{
+            if($data['status'] != 0) {
+                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+            }
+            Db::startTrans();
+            $res = db('user')->where('id='.$data['user_id'])->setDec('lock_money', $data['money']);
+            $lock_money = db('user')->where('id='.$data['user_id'])->value('lock_money');
+            if($lock_money < 0) {
+                Db::rollback();
+                $this->error('数据错误',null,-3);
+            }
+            if($res) {
+                db('user_withdraw')->where('id='.$data['id'])->setField('status',1);
+                /*添加流水记录*/
+                $money_log_1['user_id'] = $data['user_id'];
+                $money_log_1['type'] = 2;
+                $money_log_1['money'] = $data['money'];
+                $money_log_1['memo'] = '余额提现';
+                $money_log_1['createtime'] = time();
+                $money_log[] = $money_log_1;
+                db('user_money_log')->insertAll($money_log);
+                /*添加流水记录*/
+                Db::commit();
+                $this->success('成功',null,1);
+            }else{
+                $this->error('失败',null,-2);
+            }
+        }
+    }
+
+    /**
+     * 提现申请审核失败操作
+     * @param string $id 数据id
+     */
+    public function withdraw_apply_error()
+    {
+        $id = $this->request->request('id');
+        if(!$id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+
+        $data = db('user_withdraw')
+        ->where('id='.$id)
+        ->find();
+        if(empty($data)) {
+            $this->error(__('无效的参数'), null, -1);
+        }else{
+            if($data['status'] != 0) {
+                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+            }
+            Db::startTrans();
+            $res = db('user')->where('id='.$data['user_id'])->setDec('lock_money', $data['money']);
+            db('user')->where('id='.$data['user_id'])->setInc('money', $data['money']);
+            $lock_money = db('user')->where('id='.$data['user_id'])->value('lock_money');
+            if($lock_money < 0) {
+                Db::rollback();
+                $this->error('数据错误',null,-3);
+            }
+            if($res) {
+                db('user_withdraw')->where('id='.$data['id'])->setField('status',-1);
+                Db::commit();
                 $this->success('成功',null,1);
             }else{
                 $this->error('失败',null,-2);
@@ -562,5 +826,221 @@ class User extends Api
 
         $this->success('请求成功', $pay_info);
     }
+
+    /**
+     * 我的钱包
+     *
+     * @param int $user_id  用户id
+     * @param int $page  页码
+     * @param int $count  数据量
+     */
+    public function wallet()
+    {
+        $user_id = $this->request->request('user_id');
+        if(!$user_id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+        $page = $this->request->request('page');
+        $count = $this->request->request('count');
+        if(empty($page)) $page = 1;
+        if(empty($count)) $count = 10;
+        $start = ($page-1)*$count;
+
+        $user = db('user')->where('id='.$user_id)->find();
+        //余额
+        $money_info['money'] = $user['money'];
+        //货款
+        $money_info['goods_payment'] = $user['goods_payment'];
+        //保证金
+        $money_info['margin'] = $user['margin'];
+        //奖励金
+        $money_info['bounty'] = db('user_bounty')->where('user_id='.$user_id.' and status=0')->sum('money');
+        //利润
+        $money_info['profit'] = db('user_money_log')
+        ->where('memo="利润" and user_id='.$user_id)
+        ->sum('money');
+        //销售折扣（团队收益）
+        if($user['level_id'] == 1){
+            
+        }else{
+            $money_info['team_money'] = 0;
+        }
+        $money_log = db('user_money_log')
+        ->field('type,money,memo,createtime')
+        ->where('user_id='.$user_id)
+        ->order('createtime','desc')
+        ->limit($start,$count)
+        ->select();
+
+        $data['money_info'] = $money_info;
+        $data['money_log'] = $money_log;
+
+        $this->success('请求成功', $data);
+
+    }
+
+    /**
+     * 获取代理等级信息
+     */
+    public function level_info()
+    {
+        $level = db('level')
+        ->field('id,nickname')
+        ->select();
+        $this->success('请求成功', $level);
+    }
+
+    /**
+     * 代理列表
+     *
+     * @param int $user_id  用户id
+     * @param int $type  代理类型：1=直属代理，2=分销商
+     * @param int $level_id  代理等级ID
+     */
+    public function agency_list()
+    {
+        $user_id = $this->request->request('user_id');
+        $type = $this->request->request('type');
+        $level_id = $this->request->request('level_id');
+        if(!$user_id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+        if(empty($type)) $type = 1;
+
+        $where1 = 'a.status="1" and a.superior_id='.$user_id;
+
+        $where2 = 'a.status="1" and a.inviter_id='.$user_id.' and a.superior_id!='.$user_id;
+
+        if($level_id > 0) {
+            $where1 .= ' and level_id='.$level_id;
+            $where2 .= ' and level_id='.$level_id;
+        }
+        
+        $agency_1 = db('user a')
+        ->join('level b','a.level_id=b.id')
+        ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name')
+        ->where($where1)
+        ->order('a.createtime','desc')
+        ->select();
+        foreach ($agency_1 as $key => $value) {
+            if(!empty($agency_1[$key]['avatar'])) {
+                $agency_1[$key]['avatar'] = get_http_host($agency_1[$key]['avatar']);
+            }
+        }
+        $agency_1_num = count($agency_1);
+
+        $agency_2 = db('user a')
+        ->join('level b','a.level_id=b.id')
+        ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name')
+        ->where($where2)
+        ->order('a.createtime','desc')
+        ->select();
+        $agency_2_num = count($agency_2);
+
+        $data['agency_1_num'] = $agency_1_num;
+        $data['agency_2_num'] = $agency_2_num;
+        if($type == 1){
+            $data['agency_data'] = $agency_1;
+        }else if($type == 2){
+            $data['agency_data'] = $agency_2;
+        }
+        foreach ($data['agency_data'] as $key => $value) {
+            $data['agency_data'][$key]['team_money'] = $this->get_team_money($data['agency_data'][$key]['user_id']);
+        }
+        
+
+        $this->success('请求成功', $data);
+    }
+
+    /**
+     * 代理下级列表
+     *
+     * @param int $user_id  用户id
+     * @param int $type  代理类型：1=直属代理，2=分销商
+     * @param int $level_id  代理等级ID
+     */
+    public function agency_child_list()
+    {
+        $user_id = $this->request->request('user_id');
+        $type = $this->request->request('type');
+        $level_id = $this->request->request('level_id');
+        if(!$user_id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+        if(empty($type)) $type = 1;
+
+        $where1 = 'a.status="1" and a.superior_id='.$user_id;
+
+        $where2 = 'a.status="1" and a.inviter_id='.$user_id.' and a.superior_id!='.$user_id;
+
+        if($level_id > 0) {
+            $where1 .= ' and level_id='.$level_id;
+            $where2 .= ' and level_id='.$level_id;
+        }
+        
+        $agency_1 = db('user a')
+        ->join('level b','a.level_id=b.id')
+        ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name')
+        ->where($where1)
+        ->order('a.createtime','desc')
+        ->select();
+        foreach ($agency_1 as $key => $value) {
+            if(!empty($agency_1[$key]['avatar'])) {
+                $agency_1[$key]['avatar'] = get_http_host($agency_1[$key]['avatar']);
+            }
+        }
+        $agency_1_num = count($agency_1);
+
+        $agency_2 = db('user a')
+        ->join('level b','a.level_id=b.id')
+        ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name')
+        ->where($where2)
+        ->order('a.createtime','desc')
+        ->select();
+        $agency_2_num = count($agency_2);
+
+        $data['agency_1_num'] = $agency_1_num;
+        $data['agency_2_num'] = $agency_2_num;
+        if($type == 1){
+            $data['agency_data'] = $agency_1;
+        }else if($type == 2){
+            $data['agency_data'] = $agency_2;
+        }
+        foreach ($data['agency_data'] as $key => $value) {
+            $data['agency_data'][$key]['team_money'] = $this->get_team_money($data['agency_data'][$key]['user_id']);
+        }
+        
+
+        $this->success('请求成功', $data);
+    }
+
+    public function get_team_money($user_id)
+    {
+        $team_money = 0;
+        $users = db('user')->where('superior_id='.$user_id)->select();
+        if(!empty($users)){
+            foreach ($users as $key => $value) {
+                $child_users = db('user')->where('superior_id='.$users[$key]['id'])->select();
+                $order_total_amount = db('order')->where('user_id='.$users[$key]['id'].' and status=3')->sum('total_amount');
+                $team_money += $order_total_amount;
+                if(!empty($child_users)) {
+                    $team_money += $this->get_team_money($users[$key]['id']);
+                }
+            }
+        }
+        
+        return $team_money;
+    }
+
+
+
+
+
+
+
+
+
+
+
 
 }

@@ -109,6 +109,12 @@ class Api
                 }
             }
         }
+        /*跨域问题 时间：2020-02-09*/
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: Authorization, Content-Type, If-Match, If-Modified-Since, If-None-Match, If-Unmodified-Since, X-Requested-With');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE');
+        header('Access-Control-Max-Age: 1728000');
+        /*跨域问题end*/
 
         //移除HTML标签
         $this->request->filter('trim,strip_tags,htmlspecialchars');

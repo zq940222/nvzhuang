@@ -8,7 +8,6 @@ function jsonReturn($msg,$code = -1,$data = []){
 	if(!empty($data))$rs['data'] = $data;
 	return json_encode($rs);
 }
-
 /**
  * 给图片添加域名信息
  */
