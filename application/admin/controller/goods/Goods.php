@@ -75,14 +75,14 @@ class Goods extends Backend
                         }else{
                             $items[$key]['key'] = $key;
                             $items[$key]['key_name'] = $this->getKeyNameByKey($key);
-                            if (!$value['image'])
+                            if (!$value['spec_image'])
                             {
-                                unset($items[$key]['image']);
+                                unset($items[$key]['item_img']);
                             }
                         }
                     }
                     $product = model('Goods')->find($ids);
-                    $product->specGoodsPrice()->delete();
+                    model('SpecGoodsPrice')->where('goods_id', '=', $ids)->delete();
                     $result =$product->specGoodsPrice()->saveAll($items);
                     if ($result !== false)
                     {
@@ -121,7 +121,7 @@ class Goods extends Backend
         $data = SpecItem::all($keyArray,['spec']);
         $keyName = '';
         foreach ($data as $v) {
-            $keyName .= $v['spec']['item'];
+            $keyName .= $v['spec']['name'];
             $keyName .= ':';
             $keyName .= $v['item'];
             $keyName .= ' ';

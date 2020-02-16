@@ -43,10 +43,10 @@ class FreightTemplate extends Model
         return isset($list[$value]) ? $list[$value] : '';
     }
 
+
     public function freightConfig()
     {
         return $this->hasMany('FreightConfig', 'template_id', 'template_id');
     }
-
 
 }

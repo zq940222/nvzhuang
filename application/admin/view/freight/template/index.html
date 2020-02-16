@@ -8,149 +8,17 @@
                     <div id="toolbar" class="toolbar">
                         <a href="javascript:;" class="btn btn-primary btn-refresh" title="{:__('Refresh')}" ><i class="fa fa-refresh"></i> </a>
                         <a href="javascript:;" class="btn btn-success btn-add {:$auth->check('freight/template/add')?'':'hide'}" title="{:__('Add')}" ><i class="fa fa-plus"></i> {:__('Add')}</a>
+
+                        
                     </div>
-                    <div class="page">
-                        {volist name="template_list" id="template"}
-                            <div class="flexigrid" style="width: 987px;">
-                                <div class="mDiv">
-                                    <div class="ftitle">
-                                        <h3>{$template.template_name}</h3>
-                                        <h5>{$template.type_desc}</h5>
-                                    </div>
-                                    <div title="删除运费模板" data-template-id="{$template.template_id}" class="pReload delete_template"><i class="fa fa-trash-o"></i></div>
-                                    <a href="{:U('Freight/info',['template_id'=>$template.template_id])}"><div title="编辑运费模板" class="pReload"><i class="fa fa-pencil-square-o"></i></div></a>
-                                </div>
-                                <div class="hDiv">
-                                    <div class="hDivBox">
-                                        <table cellspacing="0" cellpadding="0">
-                                            <thead>
-                                            <tr>
-                                                <th align="left" abbr="article_title" axis="col3" class="">
-                                                    <div style="text-align: center; width: 300px;" class="">配送区域</div>
-                                                </th>
-                                                <th align="left" abbr="ac_id" axis="col4" class="">
-                                                    <div style="text-align: center; width: 150px;" class="">首{$template.type_desc}({$template.unit_desc})</div>
-                                                </th>
-                                                <th align="left" abbr="ac_id" axis="col4" class="">
-                                                    <div style="text-align: center; width: 150px;" class="">运费(元)</div>
-                                                </th>
-                                                <th align="center" abbr="article_show" axis="col5" class="">
-                                                    <div style="text-align: center; width: 150px;" class="">续{$template.type_desc}({$template.unit_desc})</div>
-                                                </th>
-                                                <th align="center" abbr="article_time" axis="col6" class="">
-                                                    <div style="text-align: center; width: 150px;" class="">运费(元)</div>
-                                                </th>
-                                            </tr>
-                                            </thead>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div class="bDiv" style="height: auto;">
-                                    <div>
-                                        <table>
-                                            <tbody>
-                                            {volist name="template[freightConfig]" id="config" offset="0" length="5"}
-                                                <tr>
-                                                    <td align="left" class="">
-                                                        <div style="text-align: center; width: 300px;">
-                                                            {if condition="$config[is_default] eq 1"}
-                                                                中国
-                                                                {else/}
-                                                                {volist name="config[freightRegion]" id="freight_region"}
-                                                                    {$freight_region.region.name},
-                                                                {/volist}
-                                                            {/if}
-                                                        </div>
-                                                    </td>
-                                                    <td align="left" class="">
-                                                        <div style="text-align: center; width: 150px;">{$config.first_unit}</div>
-                                                    </td>
-                                                    <td align="left" class="">
-                                                        <div style="text-align: center; width: 150px;">{$config.first_money}</div>
-                                                    </td>
-                                                    <td align="left" class="">
-                                                        <div style="text-align: center; width: 150px;">{$config.continue_unit}</div>
-                                                    </td>
-                                                    <td align="left" class="">
-                                                        <div style="text-align: center; width: 150px;">{$config.continue_money}</div>
-                                                    </td>
-                                                </tr>
-                                            {/volist}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        {/volist}
-                    </div>
+                    <table id="table" class="table table-striped table-bordered table-hover table-nowrap"
+                           data-operate-edit="{:$auth->check('freight/template/edit')}" 
+                           data-operate-del="{:$auth->check('freight/template/del')}" 
+                           width="100%">
+                    </table>
                 </div>
             </div>
 
         </div>
     </div>
 </div>
-
-<script>
-    $(document).ready(function(){
-        // 表格行点击选中切换
-        $('#flexigrid > table>tbody >tr').click(function(){
-            $(this).toggleClass('trSelected');
-        });
-
-    });
-    //删除运费确定事件
-    $(function () {
-        $(document).on("click", '.delete_template', function (e) {
-            var template_id = $(this).data('template-id');
-            layer.confirm('确认删除？', {
-                    btn: ['确定', '取消'] //按钮
-                }, function () {
-                    $.ajax({
-                        type: 'post',
-                        url: "{:Url('Freight/delete')}",
-                        data: {template_id: template_id},
-                        dataType: 'json',
-                        success: function (data) {
-                            layer.closeAll();
-                            if (data.status == 1) {
-                                layer.msg(data.msg, {icon: 1, time: 2000}, function () {
-                                    window.location.reload();
-                                });
-                            } else if (data.status == -1) {
-                                layer.confirm(data.msg, {
-                                        btn: ['确定', '取消'] //按钮
-                                    }, function () {
-                                        $.ajax({
-                                            type: 'post',
-                                            url: "{:Url('Freight/delete')}",
-                                            data: {template_id: template_id, action: 'confirm'},
-                                            dataType: 'json',
-                                            success: function (data) {
-                                                layer.closeAll();
-                                                if (data.status == 1) {
-                                                    layer.msg(data.msg, {icon: 1, time: 2000}, function () {
-                                                        window.location.reload();
-                                                    });
-                                                } else if (data.status == -1) {
-                                                    layer.msg(data.msg, {icon: 2, time: 2000});
-                                                } else {
-                                                    layer.msg(data.msg, {icon: 2, time: 2000});
-                                                }
-                                            }
-                                        })
-                                    }, function (index) {
-                                        layer.close(index);
-                                    }
-                                );
-                            } else {
-                                layer.msg(data.msg, {icon: 2, time: 2000});
-                            }
-                        }
-                    })
-                }, function (index) {
-                    layer.close(index);
-                }
-            );
-        })
-    })
-</script>

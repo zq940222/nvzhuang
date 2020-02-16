@@ -1,7 +1,3 @@
-<link href="__PUBLIC__/static/css/base.css" rel="stylesheet" type="text/css">
-<script type="text/javascript" src="__PUBLIC__/static/js/jquery.js"></script>
-<script type="text/javascript" src="__PUBLIC__/js/global.js"></script>
-<script type="text/javascript" src="__PUBLIC__/static/js/layer/layer.js"></script>
 <style type="text/css">
     html{
         min-height: 100%;
@@ -47,20 +43,20 @@
 <div id="layoutRight">
     <div class="tp-area-list-wrap">
         <ul class="tp-area-list clearfix" id="area_list">
-            <volist name="select_area" id="area">
+            {volist name="select_area" id="area"}
                 <li>
                     <label><input class="checkbox" type="checkbox" checked name="area_list[]" data-name="{$area.name}" value="{$area.region_id}">{$area.name}</label>
                 </li>
-            </volist>
+            {/volist}
         </ul>
     </div>
     <div class="tp-inline-block-wrap">
         <div class="main-content" id="mainContent">
             <select name="province" id="province" size="6" onChange="get_city(this,0)">
                 <option value="0">请选择省份</option>
-                <volist name="province_list" id="province">
+                {volist name="province_list" id="province"}
                     <option value="{$province.id}">{$province.name}</option>
-                </volist>
+                {/volist}
             </select>
             <select name="city" id="city" size="6"  onChange="get_area(this)">
                 <option value="0">请选择城市</option>
