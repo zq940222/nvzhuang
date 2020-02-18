@@ -52,7 +52,7 @@ class Cart extends Api
 
         $data['createtime'] = time();
 
-        $res = db('carts')->insert($data);
+        $res = db('cart')->insert($data);
 
         if($res) {
             $this->success('添加成功', null, 1);
@@ -73,7 +73,7 @@ class Cart extends Api
 
         if(empty($user_id)) $this->error(__('user_id 不能为空'), null, -1);
 
-        $data = db('carts')
+        $data = db('cart')
         ->field('cart_id,goods_id,goods_spec_id,lprice,price,num')
         ->where('is_delete=0 and user_id='.$user_id)
         ->select();

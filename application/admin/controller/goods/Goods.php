@@ -122,6 +122,7 @@ class Goods extends Backend
         $keyName = '';
         foreach ($data as $v) {
             $keyName .= $v['spec']['item'];
+            //$keyName .= $v['spec']['name'];
             $keyName .= ':';
             $keyName .= $v['item'];
             $keyName .= ' ';

@@ -82,7 +82,7 @@ class Goods extends Api
 
         if(!empty($price_interval)) $where .= ' and price'.$level.' between '.explode('-', $price_interval)[0].' and '.explode('-', $price_interval)[1];
 
-        if(!empty($search)) $where .= ' and keywords like %'.$search.'%';
+        if(!empty($search)) $where .= ' and keywords like "%'.$search.'%"';
 
         $data = db('goods')
         ->field($field)

@@ -600,7 +600,8 @@ class Order extends Api
         $images = $this->request->request('images');
         if(!$user_id || !$order_id || !$order_goods_id || !$goods_num) $this->error('参数不能为空', null, -1);
 
-        $order = db('order')->where('id='.$order_id)->find();
+        $order = db('order')->where('id='.$order_id)->find();//shipping_time
+        if($order['shipping_time'] > 3600*24*15) $this->error('超出退单时间', null, -6);
         if($user_id != $order['user_id']) $this->error('参数错误', null, -2);
         $order_goods = db('order_goods')->where('id='.$order_goods_id)->find();
         if($order_id != $order_goods['order_id']) $this->error('参数错误', null, -2);

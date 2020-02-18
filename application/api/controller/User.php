@@ -860,6 +860,11 @@ class User extends Api
         ->where('memo="利润" and user_id='.$user_id)
         ->sum('money');
         //销售折扣（团队收益）
+        /*
+        1）招代理算业绩（招顶级不算，顶级下单算业绩）
+        2）子代理算业绩
+        3）自己的订单算业绩
+        */
         if($user['level_id'] == 1){
             
         }else{
