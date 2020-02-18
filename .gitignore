@@ -1,7 +1,3 @@
 runtime/*
 .idea/*
 .env
-.gitignore
-public/*
-application/database.php
-application/api/*
