@@ -16,7 +16,7 @@ return [
     // 数据库类型
     'type'            => Env::get('database.type', 'mysql'),
     // 服务器地址
-    'hostname'        => Env::get('database.hostname', 'localhost'),
+    'hostname'        => Env::get('database.hostname', '39.100.0.250'),
     // 数据库名
     'database'        => Env::get('database.database', 'scdaili'),
     // 用户名

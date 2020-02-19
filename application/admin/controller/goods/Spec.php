@@ -62,7 +62,7 @@ class Spec extends Backend
                 $specItemArray = [];
                 foreach ($values['specItem'] as $value)
                 {
-                    $specItemArray[] = $value['name'];
+                    $specItemArray[] = $value['item'];
                 }
                 $list[$key]['item'] = implode(',',$specItemArray);
             }
