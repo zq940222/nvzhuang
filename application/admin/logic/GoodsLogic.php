@@ -47,7 +47,11 @@ class GoodsLogic extends Model
         {
             $str .=" <td><b>{$spec[$v]}</b></td>";
         }
-        $str .="<td><b>价格</b></td>
+        $str .="<td><b>一级代理价</b></td>
+                <td><b>二级代理价</b></td>
+                <td><b>三级代理价</b></td>
+                <td><b>四级代理价</b></td>
+                <td><b>原价</b></td>
                <td><b>图片</b></td>
                <td><b>操作</b></td>
              </tr>";
@@ -64,9 +68,17 @@ class GoodsLogic extends Model
             ksort($item_key_name);
             $item_key = implode(',', array_keys($item_key_name));
             if(!array_key_exists($item_key,$keySpecGoodsPrice)) {
+                $keySpecGoodsPrice[$item_key]["price1"] = 0;
+                $keySpecGoodsPrice[$item_key]["price2"] = 0;
+                $keySpecGoodsPrice[$item_key]["price3"] = 0;
+                $keySpecGoodsPrice[$item_key]["price4"] = 0;
                 $keySpecGoodsPrice[$item_key]["price"] = 0;
                 $keySpecGoodsPrice[$item_key]["spec_image"] = '';
             }
+            $str .="<td><input type='text' name='row[item][$item_key][price1]' value='{$keySpecGoodsPrice[$item_key]["price1"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
+            $str .="<td><input type='text' name='row[item][$item_key][price2]' value='{$keySpecGoodsPrice[$item_key]["price2"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
+            $str .="<td><input type='text' name='row[item][$item_key][price3]' value='{$keySpecGoodsPrice[$item_key]["price3"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
+            $str .="<td><input type='text' name='row[item][$item_key][price4]' value='{$keySpecGoodsPrice[$item_key]["price4"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
             $str .="<td><input type='text' name='row[item][$item_key][price]' value='{$keySpecGoodsPrice[$item_key]["price"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
             $str .="<td><input id='c-image-{$k}' type='hidden' name='row[item][$item_key][spec_image]' value='{$keySpecGoodsPrice[$item_key]["spec_image"]}' />";
             $str .="<span><button type='button' id='plupload-image-{$k}' class='btn btn-danger plupload list-block' data-input-id='c-image-{$k}' data-mimetype='image/gif,image/jpeg,image/png,image/jpg,image/bmp' data-multiple='false' data-preview-id='p-image-{$k}'><i class='fa fa-upload'></i> 上传</button></span>";
