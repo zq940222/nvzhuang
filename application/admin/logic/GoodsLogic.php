@@ -38,9 +38,9 @@ class GoodsLogic extends Model
 
         $spec = model('Spec')->column('id,name'); // 规格表
         $specItem = model('SpecItem')->column('id,item,spec_id');//规格项
-        $keySpecGoodsPrice = model('SpecGoodsPrice')->where('goods_id', '=',$goods_id)->column('key,key_name,price,spec_image');//规格项
+        $keySpecGoodsPrice = model('SpecGoodsPrice')->where('goods_id', '=',$goods_id)->column('key,key_name,price1,price2,price3,price4,price,spec_image');//规格项
 
-        $str = "<table class='table table-bordered' id='spec_input_tab'>";
+        $str = "<table width='100px' class='table table-bordered' id='spec_input_tab'>";
         $str .="<tr>";
         // 显示第一行的数据
         foreach ($clo_name as $k => $v)
@@ -83,8 +83,7 @@ class GoodsLogic extends Model
             $str .="<td><input id='c-image-{$k}' type='hidden' name='row[item][$item_key][spec_image]' value='{$keySpecGoodsPrice[$item_key]["spec_image"]}' />";
             $str .="<span><button type='button' id='plupload-image-{$k}' class='btn btn-danger plupload list-block' data-input-id='c-image-{$k}' data-mimetype='image/gif,image/jpeg,image/png,image/jpg,image/bmp' data-multiple='false' data-preview-id='p-image-{$k}'><i class='fa fa-upload'></i> 上传</button></span>";
             $str .="<ul class='row list-inline plupload-preview' id='p-image-{$k}' ></ul></td>";
-
-            $str .="<td><button type='button' class='btn btn-danger delete_item'>无效</button></td>";
+            $str .="<td><button type='button' class='btn btn-primary delete_item'>无效</button></td>";
             $str .="</tr>";
         }
         $str .= "</table>";
