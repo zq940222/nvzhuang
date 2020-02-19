@@ -122,7 +122,7 @@
         <label class="control-label col-xs-12 col-sm-2">{:__('Is_free_shipping')}:</label>
         <div class="col-xs-12 col-sm-8">
                         
-            <select  id="c-is_free_shipping" data-rule="required" class="form-control selectpicker" name="row[is_free_shipping]">
+            <select  id="c-is_free_shipping" data-rule="" class="form-control selectpicker" name="row[is_free_shipping]">
                 {foreach name="isFreeShippingList" item="vo"}
                     <option value="{$key}" {in name="key" value="1"}selected{/in}>{$vo}</option>
                 {/foreach}
