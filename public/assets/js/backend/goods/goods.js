@@ -46,7 +46,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                                 name: 'spec',
                                 text: __('规格'),
                                 icon: 'fa fa-list',
-                                classname: 'btn btn-info btn-xs btn-detail btn-dialog',
+                                classname: 'btn btn-info btn-xs btn-detail btn-addtabs',
                                 url: 'goods/goods/spec'
                             }],
                             formatter: Table.api.formatter.operate}
