@@ -1,0 +1,177 @@
+<style>
+    .err{color:#F00; display:none;}
+    .flexigrid input[type="text"]{width: 120px;}
+    .flexigrid {width: 1100px;}
+    .w150{text-align: center; width: 150px;}
+    .w80{text-align: center; width: 80px;}
+</style>
+<form id="edit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Template_name')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-template_name" data-rule="required" class="form-control" name="row[template_name]" type="text" value="{$row.template_name|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Is_enable_default')}:</label>
+        <div class="col-xs-12 col-sm-8">
+
+            <select  id="c-is_enable_default" data-rule="required" class="form-control selectpicker" name="row[is_enable_default]">
+                {foreach name="isEnableDefaultList" item="vo"}
+                    <option value="{$key}" {in name="key" value="$row.is_enable_default"}selected{/in}>{$vo}</option>
+                {/foreach}
+            </select>
+
+        </div>
+    </div>
+    <div class="flexigrid" id="config_table">
+        <div class="hDiv">
+            <div class="hDivBox">
+                <table class="table" cellspacing="0" cellpadding="0">
+                    <thead>
+                    <tr>
+                        <th class="left">
+                            <div class="w80"></div>
+                        </th>
+                        <th align="left">
+                            <div class="w150">配送区域</div>
+                        </th>
+                        <th align="left">
+                            <div class="first_unit w150">首件</div>
+                        </th>
+                        <th align="left">
+                            <div class="w150">运费</div>
+                        </th>
+                        <th align="center">
+                            <div class="continue_unit w150">续件</div>
+                        </th>
+                        <th align="center">
+                            <div class="w150">运费</div>
+                        </th>
+                        <th align="left" class="handle">
+                            <div class="w150">操作</div>
+                        </th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+        <div class="tDiv">
+            <div class="tDiv2">
+                <a class="new_config">
+                    <div class="button">
+                        <div title="新增自定义区域" class="add">
+                            <span><i class="fa fa-plus"></i>新增自定义区域</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="tDiv2">
+                <span class="err hidden" id="err_config_list" style="line-height:25px;font-size: 12px;">请添加配送区域</span>
+            </div>
+            <div style="clear:both"></div>
+        </div>
+        <div class="bDiv" style="height: auto;">
+            <div id="flexigrid">
+                <table>
+                    <tbody id="config_list">
+                    {volist name="freightTemplate['freightConfig']" id="config"}
+                        {if condition="$config[is_enable_default] eq 1"}
+                            <tr class="default_config">
+                                <td class="left">
+                                    <div class="w80">默认配置<input name="is_default[]" value="{$config.is_enable_default}" type="hidden"></div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150">
+                                        <input class="select_area" readonly name="" value="中国" type="text">
+                                        <input name="area_ids[]" class="area_ids" value="0" type="hidden">
+                                        <input name="config_id[]" value="{$config.config_id}" type="hidden">
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150">
+                                        <input name="first_unit[]" value="{$config.first_unit}" onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
+                                        <span class="first_unit_span">克</span>
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150">
+                                        <input name="first_money[]" value="{$config.first_money}" type="text"><span>元</span>
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150"><input name="continue_unit[]" value="{$config.continue_unit}"  onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
+                                        <span class="continue_unit_span">克</span>
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150"><input name="continue_money[]" value="{$config.continue_money}" type="text"><span>元</span>
+                                    </div>
+                                </td>
+                                <td align="left" class="handle">
+                                    <div class="w150">
+                                        <a class="btn red" href="javascript:void(0)" onclick="$(this).parent().parent().parent().remove();"><i class="fa fa-trash-o"></i>删除</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {else/}
+                            <tr>
+                                <td class="left">
+                                    <div class="w80"><input name="is_default[]" value="{$config.is_enable_default}" type="hidden"></div>
+                                </td>
+                                {php}$region_name = '';$region_id = '';{/php}
+                                {volist name="config[freightRegion]" id="freight_region"}
+                                    {php}$region_name = $region_name . $freight_region->region[name] . ',';$region_id = $region_id . $freight_region->region[id] . ',';{/php}
+                                {/volist}
+                                {php}$region_name = trim($region_name,',');$region_id = trim($region_id,',');{/php}
+                                <td align="left">
+                                    <div class="w150">
+                                        <input class="select_area" readonly name="" value="{$region_name}" type="text">
+                                        <input name="area_ids[]" class="area_ids" value="{$region_id}" type="hidden">
+                                        <input name="config_id[]" value="{$config.config_id}" type="hidden">
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150">
+                                        <input name="first_unit[]" value="{$config.first_unit}" onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
+                                        <span class="first_unit_span">克</span>
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150">
+                                        <input name="first_money[]" value="{$config.first_money}" type="text"><span>元</span>
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150"><input name="continue_unit[]" value="{$config.continue_unit}"  onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
+                                        <span class="continue_unit_span">克</span>
+                                    </div>
+                                </td>
+                                <td align="left">
+                                    <div class="w150"><input name="continue_money[]" value="{$config.continue_money}" type="text"><span>元</span>
+                                    </div>
+                                </td>
+                                <td align="left" class="handle">
+                                    <div class="w150">
+                                        <a class="btn red" href="javascript:void(0)" onclick="$(this).parent().parent().parent().remove();"><i class="fa fa-trash-o"></i>删除</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {/if}
+                    {/volist}
+                    </tbody>
+                </table>
+            </div>
+            <div class="iDiv" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="form-group layer-footer">
+        <label class="control-label col-xs-12 col-sm-2"></label>
+        <div class="col-xs-12 col-sm-8">
+            <button type="submit" class="btn btn-success btn-embossed disabled">{:__('OK')}</button>
+            <button type="reset" class="btn btn-default btn-embossed">{:__('Reset')}</button>
+        </div>
+    </div>
+</form>

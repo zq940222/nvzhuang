@@ -7,17 +7,18 @@
 </style>
 <form id="edit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
 
+    <input id="c-template_id" data-rule="required" class="form-control" name="template_id" type="hidden" value="{$row.template_id|htmlentities}">
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Template_name')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-template_name" data-rule="required" class="form-control" name="row[template_name]" type="text" value="{$row.template_name|htmlentities}">
+            <input id="c-template_name" data-rule="required" class="form-control" name="template_name" type="text" value="{$row.template_name|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Is_enable_default')}:</label>
         <div class="col-xs-12 col-sm-8">
 
-            <select  id="c-is_enable_default" data-rule="required" class="form-control selectpicker" name="row[is_enable_default]">
+            <select  id="c-is_enable_default" data-rule="required" class="form-control selectpicker" name="is_enable_default">
                 {foreach name="isEnableDefaultList" item="vo"}
                     <option value="{$key}" {in name="key" value="$row.is_enable_default"}selected{/in}>{$vo}</option>
                 {/foreach}
@@ -55,8 +56,8 @@
                     </tr>
                     </thead>
                     <tbody id="config_list">
-                    {volist name="row.freightConfig" id="config"}
-                    {if condition="$config.is_default eq 1"}
+                    {volist name="row['freightConfig']" id="config"}
+                    {if condition="$config[is_default] eq 1"}
                     <tr class="default_config">
                         <td class="left">
                             <div class="w80">默认配置<input name="is_default[]" value="{$config.is_default}" type="hidden"></div>
@@ -71,7 +72,7 @@
                         <td align="left">
                             <div class="w150">
                                 <input name="first_unit[]" value="{$config.first_unit}" onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
-                                <span class="first_unit_span">件</span>
+                                <span class="first_unit_span">克</span>
                             </div>
                         </td>
                         <td align="left">
@@ -81,7 +82,7 @@
                         </td>
                         <td align="left">
                             <div class="w150"><input name="continue_unit[]" value="{$config.continue_unit}"  onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
-                                <span class="continue_unit_span">件</span>
+                                <span class="continue_unit_span">克</span>
                             </div>
                         </td>
                         <td align="left">
@@ -100,8 +101,8 @@
                             <div class="w80"><input name="is_default[]" value="{$config.is_default}" type="hidden"></div>
                         </td>
                         {php}$region_name = '';$region_id = '';{/php}
-                        {volist name="config.freightRegion" id="freight_region"}
-                        {php}$region_name = $region_name . $freight_region->region->name . ',';$region_id = $region_id . $freight_region->region->id . ',';{/php}
+                        {volist name="config[freightRegion]" id="freight_region"}
+                        {php}$region_name = $region_name . $freight_region->region[name] . ',';$region_id = $region_id . $freight_region->region[id] . ',';{/php}
                         {/volist}
                         {php}$region_name = trim($region_name,',');$region_id = trim($region_id,',');{/php}
                         <td align="left">
@@ -114,7 +115,7 @@
                         <td align="left">
                             <div class="w150">
                                 <input name="first_unit[]" value="{$config.first_unit}" onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
-                                <span class="first_unit_span">件</span>
+                                <span class="first_unit_span">克</span>
                             </div>
                         </td>
                         <td align="left">
@@ -124,7 +125,7 @@
                         </td>
                         <td align="left">
                             <div class="w150"><input name="continue_unit[]" value="{$config.continue_unit}"  onpaste="this.value=this.value.replace(/[^\d.]/g,'')" onkeyup="this.value=this.value.replace(/[^\d.]/g,'')" type="text">
-                                <span class="continue_unit_span">件</span>
+                                <span class="continue_unit_span">克</span>
                             </div>
                         </td>
                         <td align="left">
@@ -153,18 +154,32 @@
                     </div>
                 </a>
             </div>
-            <div class="tDiv2">
-                <span class="err hidden" id="err_config_list" style="line-height:25px;font-size: 12px;">请添加配送区域</span>
-            </div>
-            <div style="clear:both"></div>
         </div>
     </div>
 
     <div class="form-group layer-footer">
         <label class="control-label col-xs-12 col-sm-2"></label>
         <div class="col-xs-12 col-sm-8">
-            <button type="submit" id="submit" class="btn btn-success btn-embossed">{:__('OK')}</button>
+            <button type="submit" id="submit" class="btn btn-success btn-embossed disabled">{:__('OK')}</button>
             <button type="reset" class="btn btn-default btn-embossed">{:__('Reset')}</button>
         </div>
     </div>
 </form>
+<script>
+    function call_back(area_list) {
+        var area_list_name = '';
+        var area_list_id = '';
+        $.each(area_list, function (index, item) {
+            area_list_name += item.name + ',';
+            area_list_id += item.id + ',';
+        });
+        var area_focus = $('.select_area_focus');
+        if(area_list_id.length > 1){
+            area_list_id = area_list_id.substr(0,area_list_id.length-1);
+            area_list_name = area_list_name.substr(0,area_list_name.length-1);
+        }
+        area_focus.val(area_list_name);
+        area_focus.parent().find('.area_ids').val(area_list_id);
+        layer.closeAll('iframe');
+    }
+</script>

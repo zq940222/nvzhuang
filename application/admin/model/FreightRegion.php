@@ -24,7 +24,7 @@ class FreightRegion extends Model
     }
     public function region()
     {
-        return $this->hasOne('region', 'id', 'region_id');
+        return $this->hasOne('area', 'id', 'region_id');
     }
     public function freightConfig()
     {

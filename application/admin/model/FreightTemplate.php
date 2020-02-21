@@ -7,11 +7,6 @@ use think\Model;
 
 class FreightTemplate extends Model
 {
-
-    
-
-    
-
     // 表名
     protected $name = 'freight_template';
     
