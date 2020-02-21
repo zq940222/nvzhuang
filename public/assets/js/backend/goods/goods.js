@@ -101,11 +101,11 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             $(function () {
                 $(document).on("click", '.delete_item', function (e) {
                     if ($(this).text() == '无效') {
-                        $(this).parent().parent().find('input').attr('disabled', 'disabled');
+                        $(this).parent().parent().find('input').removeAttr('disabled');
                         $(this).text('有效');
                     } else {
                         $(this).text('无效');
-                        $(this).parent().parent().find('input').removeAttr('disabled');
+                        $(this).parent().parent().find('input').attr('disabled', 'disabled');
                     }
                 })
             })
