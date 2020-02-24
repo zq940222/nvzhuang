@@ -168,3 +168,21 @@
         </div>
     </div>
 </form>
+<script>
+    function call_back(area_list) {
+        var area_list_name = '';
+        var area_list_id = '';
+        $.each(area_list, function (index, item) {
+            area_list_name += item.name + ',';
+            area_list_id += item.id + ',';
+        });
+        var area_focus = $('.select_area_focus');
+        if(area_list_id.length > 1){
+            area_list_id = area_list_id.substr(0,area_list_id.length-1);
+            area_list_name = area_list_name.substr(0,area_list_name.length-1);
+        }
+        area_focus.val(area_list_name);
+        area_focus.parent().find('.area_ids').val(area_list_id);
+        layer.closeAll('iframe');
+    }
+</script>

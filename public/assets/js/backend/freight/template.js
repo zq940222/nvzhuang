@@ -40,7 +40,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             var first_money_val = $(this).find("input[name^='first_money']").val();
             var continue_unit_val = $(this).find("input[name^='continue_unit']").val();
             var continue_money_val = $(this).find("input[name^='continue_money']").val();
-            var is_default_val = $(this).find("select[name^='is_enable_default']").val();
+            var is_default_val = $(this).find("input[name^='is_default']").val();
             if (area_ids_input.val().length > 0 || $('.default_config').length > 0) {
                 var configItem = new ConfigItem(config_id_val, area_ids_input.val(), first_unit_val, first_money_val, continue_unit_val, continue_money_val, is_default_val);
                 config_list.push(configItem);
@@ -85,7 +85,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
     $(function () {
         $(document).on("click", '.new_config', function (e) {
             var html =  '<tr><td class="left"> <div class="w80">' +
-                '<input name="is_enable_default[]" value="0" type="hidden"></div></td> <td align="left"> <div class="w150"> ' +
+                '<input name="is_default[]" value="0" type="hidden"></div></td> <td align="left"> <div class="w150"> ' +
                 '<input class="select_area" readonly name="" value="" type="text"> <input name="area_ids[]" class="area_ids" value="" type="hidden"> ' +
                 '<input name="config_id[]" value="" type="hidden"> </div> </td> <td align="left"> <div class="w150"> ' +
                 '<input name="first_unit[]" value="" onpaste="this.value=this.value.replace(/[^\\d.]/g,\'\')" onkeyup="this.value=this.value.replace(/[^\\d.]/g,\'\')" type="text"> ' +
@@ -109,7 +109,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         var is_enable_default = $("#c-is_enable_default").val();
         if (is_enable_default == 1 && default_config_length == 0) {
             var html =  '<tr class="default_config"><td class="left"> <div class="w80">' +
-                '默认配置<input name="is_enable_default[]" value="1" type="hidden"></div></td> <td align="left"> <div class="w150"> ' +
+                '默认配置<input name="is_default[]" value="1" type="hidden"></div></td> <td align="left"> <div class="w150"> ' +
                 '<input readonly name="" value="中国" type="text"> <input name="area_ids[]" class="area_ids" value="" type="hidden"> ' +
                 '<input name="config_id[]" value="" type="hidden"> </div> </td> <td align="left"> <div class="w150"> ' +
                 '<input name="first_unit[]" value="" onpaste="this.value=this.value.replace(/[^\\d.]/g,\'\')" onkeyup="this.value=this.value.replace(/[^\\d.]/g,\'\')" type="text"> ' +

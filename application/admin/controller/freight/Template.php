@@ -101,7 +101,7 @@ class Template extends Backend
         $freightTemplate['is_enable_default'] = $is_enable_default;
         $freightTemplate->save();
         $config_list_count = count($config_list);
-        $config_id_arr = Db::name('freight_config')->where(['template_id' => $template_id])->field('config_id', true)->select();
+        $config_id_arr = Db::name('freight_config')->where(['template_id' => $template_id])->column('config_id');
         $update_config_id_arr = [];
         if ($config_list_count > 0) {
             for ($i = 0; $i < $config_list_count; $i++) {
