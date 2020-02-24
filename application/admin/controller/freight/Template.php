@@ -127,13 +127,13 @@ class Template extends Backend
                 } else {
                     //更新配送区域
                     array_push($update_config_id_arr, $config_list[$i]['config_id']);
-                    $config_result = Db::name('freight_config')->where(['config_id' => $config_list[$i]['config_id']])->save($freight_config_data);
+                    $config_result = Db::name('freight_config')->where(['config_id' => $config_list[$i]['config_id']])->update($freight_config_data);
                     if ($config_result !== false) {
                         Db::name('freight_region')->where(['config_id' => $config_list[$i]['config_id']])->delete();
                         if(!empty($config_list[$i]['area_ids'])){
                             $area_id_arr = explode(',', $config_list[$i]['area_ids']);
                             foreach ($area_id_arr as $areaKey => $areaVal) {
-                                Db::name('freight_region')->add(['template_id'=>$freightTemplate['template_id'],'config_id' => $config_list[$i]['config_id'], 'region_id' => $areaVal]);
+                                Db::name('freight_region')->insert(['template_id'=>$freightTemplate['template_id'],'config_id' => $config_list[$i]['config_id'], 'region_id' => $areaVal]);
                             }
                         }
                     }
