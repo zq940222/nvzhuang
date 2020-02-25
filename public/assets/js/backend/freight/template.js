@@ -268,7 +268,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 }, function () {
                     $.ajax({
                         type: 'post',
-                        url: "{:U('Freight/template/del')}",
+                        url: 'Freight/template/del',
                         data: {ids: template_id},
                         dataType: 'json',
                         success: function (data) {
