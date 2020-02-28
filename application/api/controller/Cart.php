@@ -94,7 +94,33 @@ class Cart extends Api
 
     }
 
+    /**
+      *删除商品
+      * @param string cart_ids  购物车商品ID串（用英文都好拼接）
+      * @param int $user_id  用户id
+    */
+    public function del_cart_goods($cart_ids)
+    {
+        $cart_ids = $this->request->request('cart_ids');
+        $user_id = $this->request->request('user_id');
 
+        if(empty($cart_ids) || empty($user_id)){
+            if(empty($user_id)) $this->error('参数不能为空', null, -1);
+        }
+        $cart = db('cart')->where('user_id='.$user_id.' cart_id in ('.$cart_ids.')')->select();
+        if(empty($cart)) {
+            $this->error('购物车商品不存在', null, -2);
+        }
+        $res = db('cart')
+        ->where('cart_id in ('.$cart_ids.')')
+        ->delete();
+
+        if($res){
+            $this->success('删除成功');
+        }else{
+            $this->error('删除失败');
+        }
+    }
 
 
 

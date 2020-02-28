@@ -3,6 +3,7 @@
 namespace app\api\controller;
 
 use app\common\controller\Api;
+use app\api\model\KdSearch;
 use think\Db;
 
 /**
@@ -620,18 +621,67 @@ class Order extends Api
     /**
      * 查询物流
      * @param int $order_id  订单ID
+     status     订单状态:1=待发货,2=待收货,3=已完成,4=退货
+     State      物流状态：2-在途中,3-签收,4-问题件
+
+     state      物流状态：0-未发货,1-已发货,2-运输中,3-派送中,4-已签收
      */
     public function logistics_url()
     {
         $order_id = $this->request->request('order_id');
         if(!$order_id) $this->error('参数不能为空', null, -1);
 
-        $express_no = db('order')->where('id='.$order_id)->value('express_no');
-        $url = 'https://m.kuaidi100.com/app/query/?nu='.$express_no;
+        // $express_no = db('order')->where('id='.$order_id)->value('express_no');
+        // $url = 'https://m.kuaidi100.com/app/query/?nu='.$express_no;
+        // if(empty($express_no)) $this->error('暂无物流信息', null, -2);
+        // $this->success('请求成功', ['url'=>$url]);
 
-        if(empty($express_no)) $this->error('暂无物流信息', null, -2);
-        $this->success('请求成功', ['url'=>$url]);
-        
+        $order = db('order')->where('id='.$order_id)->find();
+        if(empty($order)) $this->error('订单不存在', null, -2);
+        $data = array();
+        if($order['status'] >= 1) {
+            $state = 0;
+            $Accept['AcceptStation'] = '您的订单开始处理';
+            $Accept['AcceptTime'] = date('Y-m-d H:i:s', $order['createtime']);
+            $traces[] = $Accept;
+            $data['courier_company'] = '';
+            $data['express_no'] = '';
+            if($order['status'] >= 2) {
+                $state = 1;
+                $Accept['AcceptStation'] = '卖家已发货';
+                $Accept['AcceptTime'] = date('Y-m-d H:i:s', $order['shipping_time']);
+                $traces[] = $Accept;
+
+                if(!empty($order['courier_company']) && !empty($order['express_no'])) {
+                    $data['courier_company'] = $order['courier_company'];
+                    $data['express_no'] = $order['express_no'];
+                    $courier = db('courier')->where('courier_company like "%'.$order['courier_company'].'%"')->find();
+                    if(!empty($courier)) {
+                        $KdSearch = new KdSearch;
+                        $search_data = $KdSearch->getOrderTracesByJson($courier['courier_code'], $order['express_no']);
+                        if(!empty($search_data['Traces'])){
+                            if($search_data['State'] >= 2) {
+                                $state = 2;
+                                for ($i=0; $i<=count($search_data['Traces'])-1; $i++) { 
+                                    $traces[] = $search_data['Traces'][$i];
+                                    $paisong = substr_count($search_data['Traces'][$i]['AcceptStation'], '派送');
+                                    $paijian = substr_count($search_data['Traces'][$i]['AcceptStation'], '派件');
+                                    if($paisong > 0 || $paijian > 0) {
+                                        $state = 3;
+                                    }
+                                }
+                                if($search_data['State'] == 3) {
+                                    $state = 4;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            $data['state'] = $state;
+            $data['traces'] = array_reverse($traces);
+        }
+        $this->success('请求成功', $data);
     }
 
     /**
@@ -789,8 +839,28 @@ class Order extends Api
         }
         if($refund_order['status'] == 2)
         {
-            if(empty($refund_order['courier_no'])) $this->error('暂无物流信息', null, -2);
-            $order_goods['url'] = 'https://m.kuaidi100.com/app/query/?nu='.$refund_order['courier_no'];
+            $Accept['AcceptStation'] = '买家已确认发货';
+            $Accept['AcceptTime'] = '';
+            $traces[] = $Accept;
+            $courier = db('courier')->where('courier_company like "%'.$refund_order['courier_company'].'%"')->find();
+            if(!empty($courier)) {
+                $KdSearch = new KdSearch;
+                $search_data = $KdSearch->getOrderTracesByJson($courier['courier_code'], $refund_order['courier_no']);
+                if(!empty($search_data)) {
+                    for ($i=0; $i<=count($search_data['Traces'])-1; $i++) { 
+                        $traces[] = $search_data['Traces'][$i];
+                    }
+                }else{
+                    $Accept['AcceptStation'] = '暂时无法显示物流信息';
+                    $Accept['AcceptTime'] = '';
+                    $traces[] = $Accept;
+                }
+            }else{
+                $Accept['AcceptStation'] = '暂时无法显示物流信息';
+                $Accept['AcceptTime'] = '';
+                $traces[] = $Accept;
+            }
+            $order_goods = array_reverse($traces);
         }
         
 
