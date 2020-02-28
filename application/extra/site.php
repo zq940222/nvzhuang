@@ -46,4 +46,5 @@ return array (
   'refund_address' => '阿里巴巴',
   'refund_consignee' => '马云',
   'refund_mobile' => '123456',
+  'award' => '0',
 );

@@ -1,0 +1,64 @@
+<form id="edit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Name')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-name" data-rule="required" class="form-control" name="row[name]" type="text" value="{$row.name|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Nickname')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-nickname" data-rule="required" class="form-control" name="row[nickname]" type="text" value="{$row.nickname|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Total_money')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-total_money" data-rule="required" class="form-control" step="0.01" name="row[total_money]" type="number" value="{$row.total_money|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Goods_payment')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-goods_payment" data-rule="required" class="form-control" step="0.01" name="row[goods_payment]" type="number" value="{$row.goods_payment|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Margin')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-margin" data-rule="required" class="form-control" step="0.01" name="row[margin]" type="number" value="{$row.margin|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Bonus')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-bonus" data-rule="required" class="form-control" step="0.01" name="row[bonus]" type="number" value="{$row.bonus|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Discount')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-discount" data-rule="required" class="form-control" step="0.01" name="row[discount]" type="number" value="{$row.discount|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Experience')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-experience" data-rule="required" class="form-control" step="0.01" name="row[experience]" type="number" value="{$row.experience|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="control-label col-xs-12 col-sm-2">{:__('Rebate')}:</label>
+        <div class="col-xs-12 col-sm-8">
+            <input id="c-rebate" data-rule="required" class="form-control" step="0.01" name="row[rebate]" type="number" value="{$row.rebate|htmlentities}">
+        </div>
+    </div>
+    <div class="form-group layer-footer">
+        <label class="control-label col-xs-12 col-sm-2"></label>
+        <div class="col-xs-12 col-sm-8">
+            <button type="submit" class="btn btn-success btn-embossed disabled">{:__('OK')}</button>
+            <button type="reset" class="btn btn-default btn-embossed">{:__('Reset')}</button>
+        </div>
+    </div>
+</form>
