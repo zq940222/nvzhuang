@@ -99,7 +99,7 @@ class Cart extends Api
       * @param string cart_ids  购物车商品ID串（用英文都好拼接）
       * @param int $user_id  用户id
     */
-    public function del_cart_goods($cart_ids)
+    public function del_cart_goods()
     {
         $cart_ids = $this->request->request('cart_ids');
         $user_id = $this->request->request('user_id');
@@ -107,7 +107,7 @@ class Cart extends Api
         if(empty($cart_ids) || empty($user_id)){
             if(empty($user_id)) $this->error('参数不能为空', null, -1);
         }
-        $cart = db('cart')->where('user_id='.$user_id.' cart_id in ('.$cart_ids.')')->select();
+        $cart = db('cart')->where('user_id='.$user_id.' and cart_id in ('.$cart_ids.')')->select();
         if(empty($cart)) {
             $this->error('购物车商品不存在', null, -2);
         }
