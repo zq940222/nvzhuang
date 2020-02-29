@@ -84,4 +84,14 @@ class Order extends Model
     }
 
 
+    public function users()
+    {
+        return $this->hasone('user', 'id', 'user_id')->field('id,nickname');
+    }
+
+    //获取所有订单商品
+    public function OrderGoods()
+    {
+        return $this->hasMany('OrderGoods', 'order_id', 'id');
+    }
 }
