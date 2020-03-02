@@ -7,8 +7,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 extend: {
                     index_url: 'order/order/index' + location.search,
                     add_url: 'order/order/add',
-                    edit_url: 'order/order/edit',
-                    del_url: 'order/order/del',
+                    edit_url: '',
+                    del_url: '',
                     multi_url: 'order/order/multi',
                     table: 'order',
                 }
@@ -54,17 +54,24 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                                     icon: 'fa fa-list',
                                     url: 'order/order/detail',
                                     callback: function (data) {
-                                        Layer.alert("接收到回传数据：" + JSON.stringify(data), {title: "回传数据"});
                                     }
                                 },
                                 {
                                     name: 'shipping',
                                     title: __('配送'),
                                     classname: 'btn btn-xs btn-primary btn-dialog',
-                                    icon: 'fa fa-list',
+                                    icon: 'fa fa-ambulance',
                                     url: 'order/order/shipping',
+                                    visible: function (row) {
+                                        //返回true时按钮显示,返回false隐藏
+                                        if (row.status == 1)
+                                        {
+                                            return true;
+                                        }else {
+                                            return false;
+                                        }
+                                    },
                                     callback: function (data) {
-                                        Layer.alert("接收到回传数据：" + JSON.stringify(data), {title: "回传数据"});
                                     }
                                 }
                             ],
