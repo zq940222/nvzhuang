@@ -72,6 +72,8 @@ class Order extends Backend
             if ($params) {
                 $params = $this->preExcludeFields($params);
                 $result = false;
+                $params['status'] = 2;
+                $params['shipping_time'] = time();
                 Db::startTrans();
                 try {
                     //是否采用模型验证
