@@ -317,7 +317,9 @@ class User extends Api
             }
             $user->nickname = $nickname;
         }
-        $user->avatar = $avatar;
+        if(!empty($avatar)){
+            $user->avatar = $avatar;
+        }
         $user->save();
         $this->success('修改成功');
     }
@@ -1076,6 +1078,7 @@ class User extends Api
         if(!$user_id && !$url) {
             $this->error(__('无效的参数'), null, -1);
         }
+        $url = 'http://demo02.asdeee.com/Applyagent.html';
 
         $user = db('user')->where('id='.$user_id)->find();
         if(empty($user)){
