@@ -43,7 +43,16 @@ class RefundOrder extends Model
         return isset($list[$value]) ? $list[$value] : '';
     }
 
+    public function users()
+    {
+        return $this->hasone('user', 'id', 'user_id')->field('id,nickname');
+    }
 
+    //获取所有订单商品
+    public function Goods()
+    {
+        return $this->belongsTo('Goods', 'order_goods_id', 'id');
+    }
 
 
 }

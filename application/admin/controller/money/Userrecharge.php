@@ -58,7 +58,7 @@ class Userrecharge extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        curl_get('/api/user/recharge_apply_success?id='.$ids);
+                        url('/api/user/recharge_apply_success?id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

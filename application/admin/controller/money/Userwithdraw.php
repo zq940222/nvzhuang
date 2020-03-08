@@ -58,10 +58,10 @@ class Userwithdraw extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        curl_get('/api/user/withdraw_apply_success?id='.$ids);
+                        url('/api/user/withdraw_apply_success?id='.$ids);
                     }
                     if ($params['status'] == -1){
-                        curl_get('/api/user/withdraw_apply_error?id='.$ids);
+                        url('/api/user/withdraw_apply_error?id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

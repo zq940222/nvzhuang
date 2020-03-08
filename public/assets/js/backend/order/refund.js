@@ -6,10 +6,10 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             Table.api.init({
                 extend: {
                     index_url: 'order/refund/index' + location.search,
-                    add_url: 'order/refund/add',
-                    edit_url: 'order/refund/edit',
-                    del_url: 'order/refund/del',
-                    multi_url: 'order/refund/multi',
+                    add_url: '',
+                    edit_url: '',
+                    del_url: '',
+                    multi_url: '',
                     table: 'refund_order',
                 }
             });
@@ -36,7 +36,19 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {field: 'courier_no', title: __('Courier_no')},
                         {field: 'status', title: __('Status'), searchList: {"-1":__('Status -1'),"0":__('Status 0'),"1":__('Status 1'),"2":__('Status 2'),"3":__('Status 3')}, formatter: Table.api.formatter.status},
                         {field: 'createtime', title: __('Createtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
-                        {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate, formatter: Table.api.formatter.operate}
+                        {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate,
+                            buttons: [
+                                {
+                                    name: 'detail',
+                                    title: __('详情'),
+                                    classname: 'btn btn-xs btn-primary btn-dialog',
+                                    icon: 'fa fa-list',
+                                    url: 'order/refund/detail',
+                                    callback: function (data) {
+                                    }
+                                },
+                        ],
+                            formatter: Table.api.formatter.operate}
                     ]
                 ]
             });
@@ -48,6 +60,9 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             Controller.api.bindevent();
         },
         edit: function () {
+            Controller.api.bindevent();
+        },
+        detail: function () {
             Controller.api.bindevent();
         },
         api: {
