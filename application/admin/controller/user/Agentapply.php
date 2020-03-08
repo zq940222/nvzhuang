@@ -7,8 +7,6 @@ use think\Db;
 use think\Exception;
 use think\exception\PDOException;
 use think\exception\ValidateException;
-//跨模块引入文件
-use app\api\controller\User;
 
 /**
  * 
@@ -60,9 +58,7 @@ class Agentapply extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        $User = new User;
-                        $User->register($ids);
-                        // url('/api/user/register?apply_id='.$ids);
+                        url('/api/user/register?apply_id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

@@ -7,8 +7,6 @@ use think\Db;
 use think\Exception;
 use think\exception\PDOException;
 use think\exception\ValidateException;
-//跨模块引入文件
-use app\api\controller\User;
 
 /**
  * 提现申请管理
@@ -60,14 +58,10 @@ class Userwithdraw extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        $User = new User;
-                        $User->withdraw_apply_success($ids);
-                        // url('/api/user/withdraw_apply_success?id='.$ids);
+                        url('/api/user/withdraw_apply_success?id='.$ids);
                     }
                     if ($params['status'] == -1){
-                        $User = new User;
-                        $User->withdraw_apply_error($ids);
-                        // url('/api/user/withdraw_apply_error?id='.$ids);
+                        url('/api/user/withdraw_apply_error?id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

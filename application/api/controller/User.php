@@ -186,7 +186,7 @@ class User extends Api
 
         $ret = $this->auth->register($username, $password, $mobile, $agency_id, $real_name, $extend);
         if ($ret) {
-            $data = ['userinfo' => $this->auth->getUserinfo()];
+            $data['userinfo'] = $this->auth->getUserinfo();
             $user_bounty = array();
             $user_bounty['user_id'] = $data['superior_id'];
             $user_bounty['sub_id'] = $data['userinfo']['id'];
