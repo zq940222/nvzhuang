@@ -16,7 +16,7 @@ use think\Request;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info','get_qrcode'];
+    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info','get_qrcode','withdraw_apply_success','withdraw_apply_error','recharge_apply_success','recharge_apply_error'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -443,8 +443,8 @@ class User extends Api
         $user = db('user')->where('id='.$upgrade['user_id'])->find();
         $level = db('level')->where('id='.$upgrade['level'])->find();
         // 1.将货款和保证金加到用户数据里
-        db('user')->where('user_id='.$upgrade['user_id'])->setInc('goods_payment', $level['goods_payment']);
-        db('user')->where('user_id='.$upgrade['user_id'])->setInc('margin', $level['margin']);
+        db('user')->where('id='.$upgrade['user_id'])->setInc('goods_payment', $level['goods_payment']);
+        db('user')->where('id='.$upgrade['user_id'])->setInc('margin', $level['margin']);
         /*添加流水记录*/
         $money_log_1['user_id'] = $upgrade['user_id'];
         $money_log_1['type'] = 1;
@@ -464,7 +464,7 @@ class User extends Api
         /*添加流水记录*/        
 
         // 2.修改用户等级 并判断当前代理等级是否大于上级用户代理等级 如果大于将上级id变为原上级的上级id
-        $edit_user_data['level'] = $upgrade['level'];
+        $edit_user_data['level_id'] = $upgrade['level'];
         if($user['superior_id'] > 0) {
             $parent_user = db('user')->where('id='.$user['superior_id'])->find();
             if($parent_user['level_id'] >= $upgrade['level']) {
@@ -472,7 +472,7 @@ class User extends Api
             } 
         }
         
-        $res = db('user')->where('user_id='.$upgrade['user_id'])->update($edit_user_data);
+        $res = db('user')->where('id='.$upgrade['user_id'])->update($edit_user_data);
 
         if($res) {
             $this->success('修改成功');
@@ -604,25 +604,25 @@ class User extends Api
             }
             $res = db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $data['money']);
             $level_id = db('user')->where('id='.$data['user_id'])->value('level_id');
-            $experience = db('level')->where('id='.$level_id)->value('experience');
-            if($experience > 0){
-                $money_log_3['user_id'] = $data['user_id'];
-                $money_log_3['type'] = 1;
-                $money_log_3['money'] = $experience;
-                $money_log_3['memo'] = '体验金';
-                $money_log_3['createtime'] = time();
-                $money_log[] = $money_log_3;
-                db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $experience);
-            }
-            if($data['money'] > 9800) {
-                $money_log_2['user_id'] = $data['user_id'];
-                $money_log_2['type'] = 1;
-                $money_log_2['money'] = 200;
-                $money_log_2['memo'] = '体验金';
-                $money_log_2['createtime'] = time();
-                $money_log[] = $money_log_2;
-                db('user')->where('id='.$data['user_id'])->setInc('goods_payment', 200);
-            }
+            // $experience = db('level')->where('id='.$level_id)->value('experience');
+            // if($experience > 0){
+            //     $money_log_3['user_id'] = $data['user_id'];
+            //     $money_log_3['type'] = 1;
+            //     $money_log_3['money'] = $experience;
+            //     $money_log_3['memo'] = '体验金';
+            //     $money_log_3['createtime'] = time();
+            //     $money_log[] = $money_log_3;
+            //     db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $experience);
+            // }
+            // if($data['money'] > 9800) {
+            //     $money_log_2['user_id'] = $data['user_id'];
+            //     $money_log_2['type'] = 1;
+            //     $money_log_2['money'] = 200;
+            //     $money_log_2['memo'] = '体验金';
+            //     $money_log_2['createtime'] = time();
+            //     $money_log[] = $money_log_2;
+            //     db('user')->where('id='.$data['user_id'])->setInc('goods_payment', 200);
+            // }
             if($res) {
                 db('user_recharge')->where('id='.$data['id'])->setField('status',1);
                 /*添加流水记录*/

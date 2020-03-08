@@ -56,12 +56,22 @@ class Userrecharge extends Backend
                 $result = false;
                 Db::startTrans();
                 try {
-                    $result = $row->allowField(true)->save($params);
+                    // $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/recharge_apply_success?id='.$ids);
+                        $res = curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/recharge_apply_success?id='.$ids);
+                        if(json_decode($res,true)['code'] == 1){
+                            $result = true;
+                        }else{
+                            $result = false;
+                        }
                     }
                     if ($params['status'] == -1){
-                        curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/recharge_apply_error?id='.$ids);
+                        $res = curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/recharge_apply_error?id='.$ids);
+                        if(json_decode($res,true)['code'] == 1){
+                            $result = true;
+                        }else{
+                            $result = false;
+                        }
                     }
                     Db::commit();
                 } catch (ValidateException $e) {
