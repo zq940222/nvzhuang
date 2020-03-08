@@ -7,6 +7,8 @@ use think\Db;
 use think\Exception;
 use think\exception\PDOException;
 use think\exception\ValidateException;
+//跨模块引入文件
+use app\api\controller\User;
 
 /**
  * 货款充值管理
@@ -58,7 +60,14 @@ class Userrecharge extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        url('/api/user/recharge_apply_success?id='.$ids);
+                        $User = new User;
+                        $User->recharge_apply_success($ids);
+                        // url('/api/user/recharge_apply_success?id='.$ids);
+                    }
+                    if ($params['status'] == -1){
+                        $User = new User;
+                        $User->upgrade($recharge_apply_error);
+                        // url('/api/user/recharge_apply_error?id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

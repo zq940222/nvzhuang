@@ -7,6 +7,8 @@ use think\Db;
 use think\Exception;
 use think\exception\PDOException;
 use think\exception\ValidateException;
+//跨模块引入文件
+use app\api\controller\User;
 /**
  * 代理升级管理
  *
@@ -56,7 +58,9 @@ class Agentupgrade extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        url('/api/user/upgrade?id='.$ids);
+                        $User = new User;
+                        $User->upgrade($ids);
+                        // url('/api/user/upgrade?id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

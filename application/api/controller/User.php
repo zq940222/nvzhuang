@@ -881,20 +881,27 @@ class User extends Api
         2）自己一条线的订单算业绩（自己的订单算业绩）
         */
         $money_info['team_money'] = 0;
+        $team_money = 0;
 
         $firstday = date('Y-m-01', strtotime(date("Y-m-d")));
         $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
         $firstday_time = strtotime($firstday);
         $lastday_time = strtotime($lastday);
         $where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
-
+        //1）招代理算业绩（招顶级不算，顶级下单算业绩）
+        $team_money += db("agent_apply")
+        ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
+        ->sum('pay_money');
+        //2）自己一条线的订单算业绩（自己的订单算业绩）
+        $team_money += $this->get_team_money($user_id);
         if($user['level_id'] == 1){
-            //1）招代理算业绩（招顶级不算，顶级下单算业绩）
-            $money_info['team_money'] += db("agent_apply")
-            ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
-            ->sum('pay_money');
-            //2）自己一条线的订单算业绩（自己的订单算业绩）
-            $money_info['team_money'] += $this->get_team_money($user_id);
+            $team_money = $team_money / 10000;
+            $back_money = db('back_money')->select();
+            foreach ($back_money as $key => $value) {
+                if($team_money > $back_money[$key]['sales']) {
+                    $money_info['team_money'] = $back_money[$key]['discount_money'];
+                }
+            }
         }
         $money_log = db('user_money_log')
         ->field('type,money,memo,createtime')
@@ -987,27 +994,56 @@ class User extends Api
      * 代理下级列表
      *
      * @param int $user_id  用户id
-     * @param int $type  代理类型：1=直属代理，2=分销商
-     * @param int $level_id  代理等级ID
+     * @param string $date  日期月份Y-m
      */
     public function agency_child_list()
     {
         $user_id = $this->request->request('user_id');
-        $type = $this->request->request('type');
-        $level_id = $this->request->request('level_id');
+        $date = $this->request->request('date');
         if(!$user_id) {
             $this->error(__('无效的参数'), null, -1);
         }
-        if(empty($type)) $type = 1;
+
+        $user = db("user")->where('id='.$user_id)->find();
+        //销售折扣（团队收益）
+        /*
+        1）招代理算业绩（招顶级不算，顶级下单算业绩）
+        2）自己一条线的订单算业绩（自己的订单算业绩）
+        */
+        if(empty($date)) {
+            $date = date('Y-m');
+        }
+        
+        $data['team_money'] = 0;
+
+        $firstday = date('Y-m-01', strtotime($date));
+        $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
+        $firstday_time = strtotime($firstday);
+        $lastday_time = strtotime($lastday);
+        $where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
+
+        // if($user['level_id'] == 1){
+        //1）招代理算业绩（招顶级不算，顶级下单算业绩）
+        $data['team_money'] += db("agent_apply")
+        ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
+        ->sum('pay_money');
+        //2）自己一条线的订单算业绩（自己的订单算业绩）
+        $data['team_money'] += $this->get_team_money($user_id,' and '.$where);
+        // }
+        
+        //销售折扣
+        $data['discount'] = 0;
+        if($user['level_id'] == 1){
+            $team_money = $data['team_money'] / 10000;
+            $back_money = db('back_money')->select();
+            foreach ($back_money as $key => $value) {
+                if($team_money > $back_money[$key]['sales']) {
+                    $data['discount'] = $back_money[$key]['discount_money'];
+                }
+            }
+        }
 
         $where1 = 'a.status="1" and a.superior_id='.$user_id;
-
-        $where2 = 'a.status="1" and a.inviter_id='.$user_id.' and a.superior_id!='.$user_id;
-
-        if($level_id > 0) {
-            $where1 .= ' and level_id='.$level_id;
-            $where2 .= ' and level_id='.$level_id;
-        }
         
         $agency_1 = db('user a')
         ->join('level b','a.level_id=b.id')
@@ -1020,25 +1056,11 @@ class User extends Api
                 $agency_1[$key]['avatar'] = get_http_host($agency_1[$key]['avatar']);
             }
         }
-        $agency_1_num = count($agency_1);
 
-        $agency_2 = db('user a')
-        ->join('level b','a.level_id=b.id')
-        ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name')
-        ->where($where2)
-        ->order('a.createtime','desc')
-        ->select();
-        $agency_2_num = count($agency_2);
+        $data['agency_data'] = $agency_1;
 
-        $data['agency_1_num'] = $agency_1_num;
-        $data['agency_2_num'] = $agency_2_num;
-        if($type == 1){
-            $data['agency_data'] = $agency_1;
-        }else if($type == 2){
-            $data['agency_data'] = $agency_2;
-        }
         foreach ($data['agency_data'] as $key => $value) {
-            $data['agency_data'][$key]['team_money'] = $this->get_team_money($data['agency_data'][$key]['user_id']);
+            $data['agency_data'][$key]['team_money'] = $this->get_team_money($data['agency_data'][$key]['user_id'].' and '.$where);
         }
         
 
@@ -1046,22 +1068,22 @@ class User extends Api
     }
 
     // 自己的一条线下面所有人的业绩总和（包括自己）
-    public function get_team_money($user_id)
+    public function get_team_money($user_id, $where = '')
     {
         $team_money = 0;
         //先查自己有没有直属下级
         $users = db('user')->where('superior_id='.$user_id)->select();
         if(!empty($users)){
             foreach ($users as $key => $value) {
-                $order_total_amount = db('order')->where('user_id='.$users[$key]['id'].' and status=3')->sum('total_amount');
+                $order_total_amount = db('order')->where('user_id='.$users[$key]['id'].' and status=3'.$where)->sum('total_amount');
                 $team_money += $order_total_amount;
                 $child_users = db('user')->where('superior_id='.$users[$key]['id'])->select();
                 if(!empty($child_users)) {
-                    $team_money += $this->get_team_money($users[$key]['id']);
+                    $team_money += $this->get_team_money($users[$key]['id'].$where);
                 }
             }
         }
-        $team_money += db('order')->where('user_id='.$user_id.' and status=3')->sum('total_amount');
+        $team_money += db('order')->where('user_id='.$user_id.' and status=3'.$where)->sum('total_amount');
         
         return $team_money;
     }
@@ -1071,11 +1093,11 @@ class User extends Api
      * @param int $user_id  用户id
      * @param int $url      用户注册申请页面链接
      */
-    public function get_qrcode($user_id, $url)
+    public function get_qrcode($user_id)
     {
         $user_id = $this->request->request('user_id');
-        $url = $this->request->request('url');
-        if(!$user_id && !$url) {
+        // $url = $this->request->request('url');
+        if(!$user_id) {
             $this->error(__('无效的参数'), null, -1);
         }
         $url = 'http://demo02.asdeee.com/Applyagent.html';
@@ -1085,31 +1107,34 @@ class User extends Api
             $this->error('用户不存在',null,-2);
         }
 
-
-        vendor("phpqrcode.phpqrcode");//引入工具包
-        $qRcode = new \QRcode();
         $data = $url.'?user_id='.$user_id;//网址或者是文本内容
-        // 纠错级别：L、M、Q、H
-        $level = 'L';
-        // 点的大小：1到10,用于手机端4就可以了
-        $size = 4;
 
-        // 生成的文件名
-        $fileName = 'user_id_'.$user_id.'.png';
-        $path = ROOT_PATH . 'public' . DS . 'uploads' . DS . 'qrcode';
-        if (!is_dir($path)) {
-            mkdir($path, 0755, true);
-        }
-        $filepath = $path . DS . $fileName;
+        $this->success('请求成功',$data);
+
+        // vendor("phpqrcode.phpqrcode");//引入工具包
+        // $qRcode = new \QRcode();
+        // $data = $url.'?user_id='.$user_id;//网址或者是文本内容
+        // // 纠错级别：L、M、Q、H
+        // $level = 'L';
+        // // 点的大小：1到10,用于手机端4就可以了
+        // $size = 4;
+
+        // // 生成的文件名
+        // $fileName = 'user_id_'.$user_id.'.png';
+        // $path = ROOT_PATH . 'public' . DS . 'uploads' . DS . 'qrcode';
+        // if (!is_dir($path)) {
+        //     mkdir($path, 0755, true);
+        // }
+        // $filepath = $path . DS . $fileName;
         
-        $qRcode->png($data, $filepath, $level, $size, 2);
+        // $qRcode->png($data, $filepath, $level, $size, 2);
         
-        if(is_file($filepath)) {
-            $img_path = 'http://'.$_SERVER['HTTP_HOST'].'/uploads/qrcode/'.$fileName;
-            $this->success('二维码生成成功',$img_path);
-        }else{
-            $this->error('二维码生成失败');
-        }
+        // if(is_file($filepath)) {
+        //     $img_path = 'http://'.$_SERVER['HTTP_HOST'].'/uploads/qrcode/'.$fileName;
+        //     $this->success('二维码生成成功',$img_path);
+        // }else{
+        //     $this->error('二维码生成失败');
+        // }
     }
 
 

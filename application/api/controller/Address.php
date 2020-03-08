@@ -75,9 +75,9 @@ class Address extends Api
                     }
                 }
             }
-            if(!empty($user_address[$key]['mobile'])) {
-                $user_address[$key]['mobile'] = $this->yc_phone($user_address[$key]['mobile']);
-            }
+            // if(!empty($user_address[$key]['mobile'])) {
+            //     $user_address[$key]['mobile'] = $this->yc_phone($user_address[$key]['mobile']);
+            // }
             $data[$key]['address_id'] = $user_address[$key]['id'];
             $data[$key]['user_id'] = $user_address[$key]['user_id'];
             $data[$key]['consignee'] = $user_address[$key]['consignee'];
@@ -87,6 +87,45 @@ class Address extends Api
         }
 
         $this->success('请求成功', $data, 1);
+    }
+
+    /**
+     * 获取用户地址详情
+     *
+     * @param int $user_id  用户id
+     * @param int $address_id  地址id
+     */
+    public function user_address_desc()
+    {
+        $user_id = $this->request->request('user_id');
+        $id = $this->request->request("address_id");
+        if(!$user_id || !$id) {
+            $this->error(__('无效的参数'), null, -1);
+        }
+
+        $user_address = db('user_address')
+        ->field('id as address_id,user_id,consignee,mobile,province_id,city_id,area_id,address,is_default')
+        ->where('user_id='.$user_id.' and id='.$id)
+        ->find();
+        if(empty($user_address)) $this->error('信息不存在', null, -2);
+
+        if(!empty($user_address['area_id'])) {
+            $mergename = db('area')->where('id='.$user_address['area_id'])->value('mergename');
+            $user_address['areaName'] = implode('', explode(',', $mergename)).$user_address['address'];                
+        }else{
+            if(!empty($user_address['city_id'])) {
+                $mergename = db('area')->where('id='.$user_address['city_id'])->value('mergename');
+                $user_address['areaName'] = implode('', explode(',', $mergename)).$user_address['address'];
+            }else{
+                if(!empty($user_address['province_id'])) {
+                    $mergename = db('area')->where('id='.$user_address['province_id'])->value('mergename');
+                    $user_address['areaName'] = implode('', explode(',', $mergename)).$user_address['address'];                        
+                }
+            }
+        }
+
+
+        $this->success('请求成功', $user_address);
     }
 
     /**
