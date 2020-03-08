@@ -56,7 +56,7 @@ class Agentupgrade extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        url('/api/user/upgrade?id='.$ids);
+                        curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/upgrade?id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

@@ -58,7 +58,7 @@ class Agentapply extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        url('/api/user/register?apply_id='.$ids);
+                        curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/register?apply_id='.$ids);
                     }
                     Db::commit();
                 } catch (ValidateException $e) {
