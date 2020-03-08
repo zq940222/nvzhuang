@@ -412,8 +412,8 @@ class User extends Api
                 $this->error(__('无效的参数 : '.$key), null, -1);
             }
         }
-        $agent_upgrade = db('agent_upgrade')->where('user_id='.$data['user_id'])->find();
-        if(!empty($agent_upgrade) && $agent_upgrade['status'] == 0) {
+        $agent_upgrade = db('agent_upgrade')->where('status="0" and user_id='.$data['user_id'])->find();
+        if(!empty($agent_upgrade)) {
             $this->error(__('暂时无法提交，有未审核申请'), null, -3);
         }
         $data['createtime'] = time();
