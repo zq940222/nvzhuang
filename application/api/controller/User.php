@@ -101,11 +101,14 @@ class User extends Api
      */
     public function apply_agent()
     {
-        $data['superior_id'] = $this->request->request('superior_id');
+        $superior_id = $this->request->request('superior_id');
+        if(!empty($superior_id)){
+            $data['superior_id'] = $superior_id;
+        }
         $data['agency_id'] = $this->request->request('agency_id');
         $data['name'] = $this->request->request('name');
         $data['mobile'] = $this->request->request('mobile');
-        $captcha = $this->request->request('captcha');
+        // $captcha = $this->request->request('captcha');
         $data['password'] = $this->request->request('password');
         $data['wx'] = $this->request->request('wx');
         $data['id_card'] = $this->request->request('id_card');
@@ -121,11 +124,27 @@ class User extends Api
             }
         }
         /****验证码验证****/
-        $ret = Sms::check($data['mobile'], $captcha, 'register');
-        if (!$ret) {
-            $this->error(__('Captcha is incorrect'));
-        }
+        // $ret = Sms::check($data['mobile'], $captcha, 'register');
+        // if (!$ret) {
+        //     $this->error(__('Captcha is incorrect'));
+        // }
         /****验证码验证end****/
+        /*--申请一个身份证一个账号--*/
+        $user = db('user')->where('status=1 and real_name="'.$data['name'].'" and id_card="'.$data['id_card'].'"')->find();
+        if(!empty($user)) {
+            $this->error('该身份证号已申请过账号', null, -3);
+        }
+        /*--当上级ID存在时判断上级货款是否充足--*/
+        if(!empty($superior_id)){
+            $level = db('level')->where('id='.$data['agency_id'])->find();
+            $p_user = db('user')->where('id='.$superior_id)->find();
+            if($p_user['goods_payment'] < $level['goods_payment']){
+                $this->error('上级资金不足，请提醒补充', null, -4);
+            }
+            db('user')->where('id='.$superior_id)->setDec('goods_payment', $level['goods_payment']);
+            db('user')->where('id='.$superior_id)->setInc('lock_goods_money', $level['goods_payment']);
+        }
+        
         $data['createtime'] = time();
         $res = db('agent_apply')->insert($data);
         if($res) {
@@ -186,6 +205,36 @@ class User extends Api
 
         $ret = $this->auth->register($username, $password, $mobile, $agency_id, $real_name, $extend);
         if ($ret) {
+            /*--如果上级存在 将上级的货款转换到余额里面--*/
+            if(!empty($p_user) && $extend['superior_id'] > 0){
+                db('user')->where('id='.$superior_id)->setDec('lock_goods_money', $level['goods_payment']);
+                db('user')->where('id='.$superior_id)->setInc('money', $level['goods_payment']);
+                /*添加流水记录*/
+                $money_log_4['user_id'] = $superior_id;
+                $money_log_4['type'] = 2;
+                $money_log_4['money'] = $level['goods_payment'];
+                $money_log_4['memo'] = '货款';
+                $money_log_4['createtime'] = time();
+                $money_log[] = $money_log_4;
+
+                $money_log_5['user_id'] = $superior_id;
+                $money_log_5['type'] = 1;
+                $money_log_5['money'] = $level['goods_payment'];
+                $money_log_5['memo'] = '余额';
+                $money_log_5['createtime'] = time();
+                $money_log[] = $money_log_5;
+
+                $message['user_id'] = $superior_id;
+                $message['message_category'] = 1;
+                $message['message_title'] = '代理招募';
+                $message['message_content'] = '代理【'.$real_name.'】招募成功！';
+                $message['status'] = 1;
+                $message['is_read'] = 0;
+                $message['createtime'] = time();
+                db('message')->insert($message);
+            }
+            /*--如果上级存在 将上级的货款转换到余额里面--*/
+
             $data['userinfo'] = $this->auth->getUserinfo();
             $user_bounty = array();
             $user_bounty['user_id'] = $data['superior_id'];
@@ -412,6 +461,19 @@ class User extends Api
                 $this->error(__('无效的参数 : '.$key), null, -1);
             }
         }
+        /*--当上级ID存在时判断上级货款是否充足--*/
+        $user = db('user')->where('id='.$data['user_id'])->find();
+        if($user['superior_id'] > 0){
+            $data['superior_id'] = $user['superior_id'];
+            $level = db('level')->where('id='.$data['level'])->find();
+            $p_user = db('user')->where('id='.$user['superior_id'])->find();
+            if($p_user['goods_payment'] < $level['goods_payment']){
+                $this->error('上级资金不足，请提醒补充', null, -4);
+            }
+            db('user')->where('id='.$user['superior_id'])->setDec('goods_payment', $level['goods_payment']);
+            db('user')->where('id='.$user['superior_id'])->setInc('lock_goods_money', $level['goods_payment']);
+        }
+
         $agent_upgrade = db('agent_upgrade')->where('status="0" and user_id='.$data['user_id'])->find();
         if(!empty($agent_upgrade)) {
             $this->error(__('暂时无法提交，有未审核申请'), null, -3);
@@ -442,9 +504,42 @@ class User extends Api
         }
         $user = db('user')->where('id='.$upgrade['user_id'])->find();
         $level = db('level')->where('id='.$upgrade['level'])->find();
+        //当用户升级时 之前等级所剩余的货款按照一定比例转换
+        if($user['goods_payment'] > 0){
+            db('user')->where('id='.$upgrade['user_id'])->setField('goods_payment', $user['goods_payment']*$level['discount']);
+        }
         // 1.将货款和保证金加到用户数据里
         db('user')->where('id='.$upgrade['user_id'])->setInc('goods_payment', $level['goods_payment']);
         db('user')->where('id='.$upgrade['user_id'])->setInc('margin', $level['margin']);
+        /*--如果上级存在 将上级的货款转换到余额里面--*/
+        if($user['superior_id'] > 0){
+            db('user')->where('id='.$user['superior_id'])->setDec('lock_goods_money', $level['goods_payment']);
+            db('user')->where('id='.$user['superior_id'])->setInc('money', $level['goods_payment']);
+            /*添加流水记录*/
+            $money_log_4['user_id'] = $user['superior_id'];
+            $money_log_4['type'] = 2;
+            $money_log_4['money'] = $level['goods_payment'];
+            $money_log_4['memo'] = '货款';
+            $money_log_4['createtime'] = time();
+            $money_log[] = $money_log_4;
+
+            $money_log_5['user_id'] = $user['superior_id'];
+            $money_log_5['type'] = 1;
+            $money_log_5['money'] = $level['goods_payment'];
+            $money_log_5['memo'] = '余额';
+            $money_log_5['createtime'] = time();
+            $money_log[] = $money_log_5;
+
+            $message['user_id'] = $user['superior_id'];
+            $message['message_category'] = 1;
+            $message['message_title'] = '代理升级';
+            $message['message_content'] = '代理【'.$real_name.'】已升级！';
+            $message['status'] = 1;
+            $message['is_read'] = 0;
+            $message['createtime'] = time();
+            db('message')->insert($message);
+        }
+        /*--如果上级存在 将上级的货款转换到余额里面--*/
         /*添加流水记录*/
         $money_log_1['user_id'] = $upgrade['user_id'];
         $money_log_1['type'] = 1;
@@ -470,6 +565,9 @@ class User extends Api
             if($parent_user['level_id'] >= $upgrade['level']) {
                 $edit_user_data['superior_id'] = $parent_user['superior_id'];
             } 
+            if($user['superior_id'] == 1){
+                $edit_user_data['superior_id'] = 0;
+            }
         }
         
         $res = db('user')->where('id='.$upgrade['user_id'])->update($edit_user_data);
@@ -603,17 +701,19 @@ class User extends Api
                 $this->error(__('申请已审核，请勿重复操作'), null, -4);
             }
             $res = db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $data['money']);
+            //添加到充值货款金额字段
+            db('user')->where('id='.$data['user_id'])->setInc('recharge_goods_money', $data['money']);
             $level_id = db('user')->where('id='.$data['user_id'])->value('level_id');
-            // $experience = db('level')->where('id='.$level_id)->value('experience');
-            // if($experience > 0){
-            //     $money_log_3['user_id'] = $data['user_id'];
-            //     $money_log_3['type'] = 1;
-            //     $money_log_3['money'] = $experience;
-            //     $money_log_3['memo'] = '体验金';
-            //     $money_log_3['createtime'] = time();
-            //     $money_log[] = $money_log_3;
-            //     db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $experience);
-            // }
+            $experience = db('level')->where('id='.$level_id)->value('experience');
+            if($experience > 0){
+                $money_log_3['user_id'] = $data['user_id'];
+                $money_log_3['type'] = 1;
+                $money_log_3['money'] = $experience;
+                $money_log_3['memo'] = '体验金';
+                $money_log_3['createtime'] = time();
+                $money_log[] = $money_log_3;
+                db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $experience);
+            }
             // if($data['money'] > 9800) {
             //     $money_log_2['user_id'] = $data['user_id'];
             //     $money_log_2['type'] = 1;
@@ -892,6 +992,10 @@ class User extends Api
         $team_money += db("agent_apply")
         ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
         ->sum('pay_money');
+        //下级升级代理算业绩
+        $team_money += db("agent_upgrade")
+        ->where($where.' and status=1 and level!=1 and superior_id='.$user_id)
+        ->sum('money');
         //2）自己一条线的订单算业绩（自己的订单算业绩）
         $team_money += $this->get_team_money($user_id);
         if($user['level_id'] == 1){
@@ -1075,7 +1179,7 @@ class User extends Api
         $users = db('user')->where('superior_id='.$user_id)->select();
         if(!empty($users)){
             foreach ($users as $key => $value) {
-                $order_total_amount = db('order')->where('user_id='.$users[$key]['id'].' and status=3'.$where)->sum('total_amount');
+                $order_total_amount = db('order')->where('gm_type=2 and user_id='.$users[$key]['id'].' and status=3'.$where)->sum('gm_money');
                 $team_money += $order_total_amount;
                 $child_users = db('user')->where('superior_id='.$users[$key]['id'])->select();
                 if(!empty($child_users)) {
@@ -1083,7 +1187,7 @@ class User extends Api
                 }
             }
         }
-        $team_money += db('order')->where('user_id='.$user_id.' and status=3'.$where)->sum('total_amount');
+        $team_money += db('order')->where('gm_type=2 and user_id='.$user_id.' and status=3'.$where)->sum('gm_money');
         
         return $team_money;
     }
