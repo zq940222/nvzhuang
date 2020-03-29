@@ -359,6 +359,19 @@ class Order extends Api
             $this->error('货款不足，请充值', null, -5);
         } else {
             db('user')->where('id='.$user_id)->setDec('goods_payment', $total_amount);
+            if($user['goods_payment'] == $user['recharge_goods_money']){
+                $gm_money = $total_amount;
+                $gm_type = 2;
+            }else{
+                if($user['goods_payment'] - $user['recharge_goods_money'] >= $total_amount){
+                    $gm_money = 0;
+                    $gm_type = 1;
+                }else{
+                    $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                    $gm_type = 2;
+                }
+            }
+            
         }
 
         //生成订单
@@ -376,6 +389,8 @@ class Order extends Api
         $order['shipping_price'] = $shipping_price;
         $order['order_amount'] = $total_amount;
         $order['total_amount'] = $total_amount;
+        $order['gm_money'] = $gm_money; //货款消费金额
+        $order['gm_type'] = $gm_type;   //货款消费类型:1-注册升级货款消费｜2-充值货款消费
 
         //推荐人返利  
         if($back_money > 0){
@@ -391,7 +406,8 @@ class Order extends Api
         }
         //当上级是平台时
         if($user['superior_id'] == 0) {
-            $order['shipment'] = '平台';
+            $order['shipment'] = '平台';  //出货方
+            $order['shipment_id'] = 0;  //出货方ID
         }else{
             //查看上级代理货款是否充足
             $p_user = db('user')->where('id='.$user['superior_id'])->find();
@@ -480,7 +496,8 @@ class Order extends Api
             $money_log[] = $money_log_3;
             db('user_money_log')->insertAll($money_log);
 
-            $order['shipment'] = $p_user['nickname'];
+            $order['shipment'] = $p_user['nickname'];   //出货方
+            $order['shipment_id'] = $p_user['id'];      //出货方ID
         }
         
         $order['goods_num'] = $total_num;
@@ -761,12 +778,12 @@ class Order extends Api
         if(!$user_id || !$order_id || !$order_goods_id || !$goods_num) $this->error('参数不能为空', null, -1);
 
         $order = db('order')->where('id='.$order_id)->find();//shipping_time
-        if($order['shipping_time'] > 3600*24*15) $this->error('超出退单时间', null, -6);
+        if(time() - $order['shipping_time'] > 3600*24*20) $this->error('超出退单时间', null, -6);
         if($user_id != $order['user_id']) $this->error('参数错误', null, -2);
         $order_goods = db('order_goods')->where('id='.$order_goods_id)->find();
         if($order_id != $order_goods['order_id']) $this->error('参数错误', null, -2);
         if($goods_num > $order_goods['goods_num']) $this->error('退货数量错误', null, -3);
-        if($order['status'] != 3) $this->error('订单状态错误', null, -4);
+        if($order['status'] != 2) $this->error('订单状态错误', null, -4);
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
         $price = db('order_goods a')

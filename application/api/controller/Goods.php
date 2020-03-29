@@ -58,7 +58,7 @@ class Goods extends Api
 
         $level = db('user')->where('id='.$user_id)->value('level_id');
 
-        $field = 'id as goods_id,goods_sn,name,cover_image,price,price'.$level.' as lprice';
+        $field = 'id as goods_id,goods_sn,name,cover_image,price,tag_price,price'.$level.' as lprice';
         $where = 'is_on_sale=1';
         $order = ['weigh'=>'asc'];
 
@@ -114,7 +114,7 @@ class Goods extends Api
 
         $level = db('user')->where('id='.$user_id)->value('level_id');
 
-        $field = 'id as goods_id,goods_sn,name,cover_image,goods_images,price,price'.$level.' as lprice,goods_content,store_count';
+        $field = 'id as goods_id,goods_sn,name,cover_image,goods_images,price,tag_price,price'.$level.' as lprice,goods_content,store_count';
         $where = 'is_on_sale=1 and id='.$goods_id;
 
         $goods = db('goods')
@@ -131,7 +131,7 @@ class Goods extends Api
             $goods['goods_images'] = $goods_images;
         }
 
-        $spec_field = 'id as group_id,goods_id,key,key_name,price,price'.$level.' as lprice,store_count,spec_image';
+        $spec_field = 'id as group_id,goods_id,key,key_name,price,tag_price,price'.$level.' as lprice,store_count,spec_image';
 
         $spec_goods_price = db('spec_goods_price')
         ->field($spec_field)
