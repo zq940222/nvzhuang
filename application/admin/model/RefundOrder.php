@@ -32,7 +32,7 @@ class RefundOrder extends Model
     
     public function getStatusList()
     {
-        return ['-1' => __('Status -1'), '0' => __('Status 0'), '1' => __('Status 1'), '2' => __('Status 2'), '3' => __('Status 3')];
+        return ['-3' => __('失效'),'-1' => __('Status -1'), '0' => __('Status 0'), '1' => __('Status 1'), '2' => __('Status 2'), '3' => __('Status 3')];
     }
 
 

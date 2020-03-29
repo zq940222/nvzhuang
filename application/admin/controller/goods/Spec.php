@@ -105,7 +105,7 @@ class Spec extends Backend
                     foreach ($items as $v) {
                         $specItem[] = [
                             'spec_id' => $this->model->id,
-                            'name' => $v
+                            'item' => $v
                         ];
                     }
                     $result2 = model('SpecItem')->saveAll($specItem);

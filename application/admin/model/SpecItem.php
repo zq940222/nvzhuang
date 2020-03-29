@@ -20,8 +20,8 @@ class SpecItem extends Model
     protected $autoWriteTimestamp = 'int';
 
     // 定义时间戳字段名
-    protected $createTime = 'createtime';
-    protected $updateTime = 'updatetime';
+    protected $createTime = false;
+    protected $updateTime = false;
 
     public function spec()
     {

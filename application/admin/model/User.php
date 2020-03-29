@@ -43,7 +43,15 @@ class User extends Model
         return isset($list[$value]) ? $list[$value] : '';
     }
 
+    public function superiors()
+    {
+        return $this->belongsTo('User','superior_id','id')->field('id,nickname');
+    }
 
+    public function inviters()
+    {
+        return $this->belongsTo('User','inviter_id','id')->field('id,nickname');
+    }
 
 
 }

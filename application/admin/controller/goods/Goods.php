@@ -69,12 +69,20 @@ class Goods extends Backend
                 try
                 {
                     $items = $params['item'];
+                    $discount1 = model('level')->where('name','=','一级代理')->find();
+                    $discount2 = model('level')->where('name','=','二级代理')->find();
+                    $discount3 = model('level')->where('name','=','三级代理')->find();
+                    $discount4 = model('level')->where('name','=','四级代理')->find();
                     foreach ($items as $key => $value) {
                         if ($value['price'] <= 0) {
                             unset($items[$key]);
                         }else{
                             $items[$key]['key'] = $key;
                             $items[$key]['key_name'] = $this->getKeyNameByKey($key);
+                            $items[$key]['price1'] = round($value['price']*$discount1['discount'],2);
+                            $items[$key]['price2'] = round($value['price']*$discount2['discount'],2);
+                            $items[$key]['price3'] = round($value['price']*$discount3['discount'],2);
+                            $items[$key]['price4'] = round($value['price']*$discount4['discount'],2);
                             if (!$value['spec_image'])
                             {
                                 unset($items[$key]['spec_image']);
