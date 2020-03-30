@@ -10,6 +10,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     edit_url: '',
                     del_url: '',
                     multi_url: '',
+                    agree_url: 'order/refund/agree',
                     table: 'refund_order',
                 }
             });
@@ -54,7 +55,25 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     ]
                 ]
             });
+            // 获取选中项
+            $(document).on("click", ".btn-agree", function () {
+                var ids = Table.api.selectedids(table);
+                var url = 'order/refund/agree'
+                var options = {url: url, data: {ids: ids}};
+                Layer.confirm(__('您确认退款选中订单吗?'),
+                    {icon: 3, title: __('Warning'), shadeClose: true},
+                    function (index) {
+                        Fast.api.ajax(options, function (data, ret) {
+                            Toastr.success(data.msg);
+                            table.bootstrapTable('refresh');
+                        }, function (data, ret) {
 
+                        });
+                        Layer.close(index);
+                    }
+                );
+
+            });
             // 为表格绑定事件
             Table.api.bindevent(table);
         },
@@ -66,6 +85,9 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         },
         detail: function () {
             Controller.api.bindevent();
+        },
+        del:function (){
+
         },
         api: {
             bindevent: function () {

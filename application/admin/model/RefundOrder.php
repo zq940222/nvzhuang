@@ -25,7 +25,8 @@ class RefundOrder extends Model
 
     // 追加属性
     protected $append = [
-        'status_text'
+        'status_text',
+        'refund_type_text',
     ];
     
 
@@ -37,6 +38,19 @@ class RefundOrder extends Model
 
 
     public function getStatusTextAttr($value, $data)
+    {
+        $value = $value ? $value : (isset($data['status']) ? $data['status'] : '');
+        $list = $this->getStatusList();
+        return isset($list[$value]) ? $list[$value] : '';
+    }
+
+    public function getRefundTypeList()
+    {
+        return ['1' => __('仅退款'), '2' => __('退货退款')];
+    }
+
+
+    public function getRefundTypeTextAttr($value, $data)
     {
         $value = $value ? $value : (isset($data['status']) ? $data['status'] : '');
         $list = $this->getStatusList();
