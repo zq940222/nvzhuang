@@ -195,7 +195,7 @@ class Goods extends Backend
                         if ($value['price'] <= 0) {
                             unset($items[$key]);
                         }else{
-                            $storeCount += $items['store_count'];
+                            $storeCount += $value['store_count'];
                             $items[$key]['key'] = $key;
                             $items[$key]['key_name'] = $this->getKeyNameByKey($key);
                             $items[$key]['price1'] = round($value['price']*$discount1['discount'],2);
@@ -209,7 +209,7 @@ class Goods extends Backend
                         }
                     }
                     $product = model('Goods')->find($ids);
-                    model('Goods')->where('id', '=', $ids)->save(['store_count' => $storeCount]);
+                    model('Goods')->where('id', '=', $ids)->update(['store_count' => $storeCount]);
                     $product->specGoodsPrice()->delete();
                     $result =$product->specGoodsPrice()->saveAll($items);
                     if ($result !== false)
