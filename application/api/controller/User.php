@@ -531,7 +531,7 @@ class User extends Api
                 //判断当前代理等级是否大于上级用户代理等级 如果大于将上级id变为原上级的上级id 并扣除其货款
                 // 先判断上级的上级是否是0 如果不是再递归判断上级的上级的等级是否没有当前用户要升级的等级高或为0
                 // 注册也是要判断
-                $p_user_id = $this->get_parent_user($user['id'], $dats['level']);
+                $p_user_id = $this->get_parent_user($user['id'], $data['level']);
                 if($p_user_id != 0){
                     $p_user = db('user')->where('id='.$p_user_id)->find();
                     $data['new_superior_id'] = $p_user_id;
