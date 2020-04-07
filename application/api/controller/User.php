@@ -781,6 +781,7 @@ class User extends Api
         $data = db('user_recharge')
         ->field($field)
         ->where($where)
+        ->order('createtime','desc')
         ->select();
 
         $this->success('请求成功', $data);

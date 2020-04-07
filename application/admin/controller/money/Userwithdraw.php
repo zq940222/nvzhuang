@@ -61,7 +61,7 @@ class Userwithdraw extends Backend
                     $model = new User();
                     if ($params['status'] == 1){
                         $res = $model->withdraw_apply_success($ids);
-                        if(json_decode($res,true)['code'] == 1){
+                        if($res['code'] == 1){
                             $result = true;
                         }else{
                             $result = false;
@@ -69,7 +69,7 @@ class Userwithdraw extends Backend
                     }
                     if ($params['status'] == -1){
                         $res = $model->withdraw_apply_error($ids);
-                        if(json_decode($res,true)['code'] == 1){
+                        if($res['code'] == 1){
                             $result = true;
                         }else{
                             $result = false;

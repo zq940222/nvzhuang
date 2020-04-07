@@ -57,7 +57,12 @@ class Agentupgrade extends Backend
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
                         $model = new \app\api\model\User();
-                        $model->upgrade($ids);
+                        $res = $model->upgrade($ids);
+                        if($res['code'] == 1){
+                            $result = true;
+                        }else{
+                            $result = false;
+                        }
                     } elseif ($params['status'] == -1){
                         if ($row['new_superior_id'] > 0) {
                             Db::name('user')->where('id','=', $row['new_superior_id'])->setInc('goods_payment', $row['goods_payment']);

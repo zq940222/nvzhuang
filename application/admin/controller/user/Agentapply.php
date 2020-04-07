@@ -59,7 +59,12 @@ class Agentapply extends Backend
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
                         $model = new \app\api\model\User();
-                        $model->register($ids);
+                        $res = $model->register($ids);
+                        if($res['code'] == 1){
+                            $result = true;
+                        }else{
+                            $result = false;
+                        }
                     }elseif ($params['status'] == -1){
                         if ($row['superior_id'] > 0) {
                             Db::name('user')->where('id','=', $row['superior_id'])->setInc('goods_payment', $row['goods_payment']);
