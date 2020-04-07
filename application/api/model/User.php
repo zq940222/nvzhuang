@@ -19,9 +19,6 @@ class User extends Model
      */
     public function register($apply_id)
     {
-        if(empty($apply_id)){
-            $apply_id = $this->request->request('apply_id');
-        }
         if (!$apply_id) {
             $this->error(__('无效的参数'), null, -1);
         }
@@ -174,9 +171,8 @@ class User extends Model
      *
      * @param string $id 申请表主键id
      */
-    public function upgrade()
+    public function upgrade($id)
     {
-        $id = $this->request->request('id');
         if (!$id) {
             $this->error(__('无效的参数'), null, -1);
         }
@@ -312,9 +308,8 @@ class User extends Model
      *
      * @param string $id 数据id
      */
-    public function recharge_apply_success()
+    public function recharge_apply_success($id)
     {
-        $id = $this->request->request('id');
         if(!$id) {
             $this->error(__('无效的参数'), null, -1);
         }
@@ -377,9 +372,8 @@ class User extends Model
      *
      * @param string $id 数据id
      */
-    public function recharge_apply_error()
+    public function recharge_apply_error($id)
     {
-        $id = $this->request->request('id');
         if(!$id) {
             $this->error(__('无效的参数'), null, -1);
         }
@@ -403,9 +397,8 @@ class User extends Model
      * 提现申请审核成功操作
      * @param string $id 数据id
      */
-    public function withdraw_apply_success()
+    public function withdraw_apply_success($id)
     {
-        $id = $this->request->request('id');
         if(!$id) {
             $this->error(__('无效的参数'), null, -1);
         }
@@ -451,9 +444,8 @@ class User extends Model
      * 提现申请审核失败操作
      * @param string $id 数据id
      */
-    public function withdraw_apply_error()
+    public function withdraw_apply_error($id)
     {
-        $id = $this->request->request('id');
         if(!$id) {
             $this->error(__('无效的参数'), null, -1);
         }
