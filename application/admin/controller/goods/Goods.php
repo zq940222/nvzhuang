@@ -5,6 +5,10 @@ namespace app\admin\controller\goods;
 use app\admin\logic\GoodsLogic;
 use app\admin\model\SpecItem;
 use app\common\controller\Backend;
+use think\Db;
+use think\Exception;
+use think\exception\PDOException;
+use think\exception\ValidateException;
 
 /**
  * 
@@ -40,6 +44,119 @@ class Goods extends Backend
 
 
     /**
+     * 添加
+     */
+    public function add()
+    {
+        if ($this->request->isPost()) {
+            $params = $this->request->post("row/a");
+            if ($params) {
+                $params = $this->preExcludeFields($params);
+
+                if ($this->dataLimit && $this->dataLimitFieldAutoFill) {
+                    $params[$this->dataLimitField] = $this->auth->id;
+                }
+                $result = false;
+                Db::startTrans();
+                try {
+                    //是否采用模型验证
+                    if ($this->modelValidate) {
+                        $name = str_replace("\\model\\", "\\validate\\", get_class($this->model));
+                        $validate = is_bool($this->modelValidate) ? ($this->modelSceneValidate ? $name . '.add' : $name) : $this->modelValidate;
+                        $this->model->validateFailException(true)->validate($validate);
+                    }
+                    $discount1 = model('level')->find(1);
+                    $discount2 = model('level')->find(2);
+                    $discount3 = model('level')->find(3);
+                    $discount4 = model('level')->find(4);
+                    $params['price1'] = round($params['price']*$discount1['discount'],2);
+                    $params['price2'] = round($params['price']*$discount2['discount'],2);
+                    $params['price3'] = round($params['price']*$discount3['discount'],2);
+                    $params['price4'] = round($params['price']*$discount4['discount'],2);
+                    $result = $this->model->allowField(true)->save($params);
+                    Db::commit();
+                } catch (ValidateException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (PDOException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (Exception $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                }
+                if ($result !== false) {
+                    $this->success();
+                } else {
+                    $this->error(__('No rows were inserted'));
+                }
+            }
+            $this->error(__('Parameter %s can not be empty', ''));
+        }
+        return $this->view->fetch();
+    }
+
+    /**
+     * 编辑
+     */
+    public function edit($ids = null)
+    {
+        $row = $this->model->get($ids);
+        if (!$row) {
+            $this->error(__('No Results were found'));
+        }
+        $adminIds = $this->getDataLimitAdminIds();
+        if (is_array($adminIds)) {
+            if (!in_array($row[$this->dataLimitField], $adminIds)) {
+                $this->error(__('You have no permission'));
+            }
+        }
+        if ($this->request->isPost()) {
+            $params = $this->request->post("row/a");
+            if ($params) {
+                $params = $this->preExcludeFields($params);
+                $result = false;
+                Db::startTrans();
+                try {
+                    //是否采用模型验证
+                    if ($this->modelValidate) {
+                        $name = str_replace("\\model\\", "\\validate\\", get_class($this->model));
+                        $validate = is_bool($this->modelValidate) ? ($this->modelSceneValidate ? $name . '.edit' : $name) : $this->modelValidate;
+                        $row->validateFailException(true)->validate($validate);
+                    }
+                    $discount1 = model('level')->find(1);
+                    $discount2 = model('level')->find(2);
+                    $discount3 = model('level')->find(3);
+                    $discount4 = model('level')->find(4);
+                    $params['price1'] = round($params['price']*$discount1['discount'],2);
+                    $params['price2'] = round($params['price']*$discount2['discount'],2);
+                    $params['price3'] = round($params['price']*$discount3['discount'],2);
+                    $params['price4'] = round($params['price']*$discount4['discount'],2);
+                    $result = $row->allowField(true)->save($params);
+                    Db::commit();
+                } catch (ValidateException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (PDOException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (Exception $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                }
+                if ($result !== false) {
+                    $this->success();
+                } else {
+                    $this->error(__('No rows were updated'));
+                }
+            }
+            $this->error(__('Parameter %s can not be empty', ''));
+        }
+        $this->view->assign("row", $row);
+        return $this->view->fetch();
+    }
+
+    /**
      * 规格详情
      */
     public function spec($ids = NULL)
@@ -69,10 +186,10 @@ class Goods extends Backend
                 try
                 {
                     $items = $params['item'];
-                    $discount1 = model('level')->where('name','=','一级代理')->find();
-                    $discount2 = model('level')->where('name','=','二级代理')->find();
-                    $discount3 = model('level')->where('name','=','三级代理')->find();
-                    $discount4 = model('level')->where('name','=','四级代理')->find();
+                    $discount1 = model('level')->find(1);
+                    $discount2 = model('level')->find(2);
+                    $discount3 = model('level')->find(3);
+                    $discount4 = model('level')->find(4);
                     foreach ($items as $key => $value) {
                         if ($value['price'] <= 0) {
                             unset($items[$key]);
