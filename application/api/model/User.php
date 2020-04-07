@@ -1,5 +1,6 @@
 <?php
 namespace app\api\model;
+use app\common\library\Auth;
 use think\Model;
 use think\Db;
 
@@ -49,7 +50,8 @@ class User extends Model
             $extend['bank_account'] = $data['bank_account'];
         }
 
-        $ret = $this->auth->register($username, $password, $mobile, $agency_id, $real_name, $extend);
+        $auth = new Auth;
+        $ret = $auth->register($username, $password, $mobile, $agency_id, $real_name, $extend);
         if ($ret) {
             /*--如果上级存在 将上级的货款转换到余额里面--*/
             if(!empty($p_user) && $extend['superior_id'] > 0){
@@ -123,7 +125,7 @@ class User extends Model
             }
             /*--如果上级存在 将上级的货款转换到余额里面END--*/
 
-            $data['userinfo'] = $this->auth->getUserinfo();
+            $data['userinfo'] = $auth->getUserinfo();
             $user_bounty = array();
             $user_bounty['user_id'] = $data['superior_id'];
             $user_bounty['sub_id'] = $data['userinfo']['id'];

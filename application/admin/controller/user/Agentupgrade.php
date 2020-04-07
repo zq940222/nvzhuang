@@ -41,12 +41,12 @@ class Agentupgrade extends Backend
         if (!$row) {
             $this->error(__('No Results were found'));
         }
-        $adminIds = $this->getDataLimitAdminIds();
-        if (is_array($adminIds)) {
-            if (!in_array($row[$this->dataLimitField], $adminIds)) {
-                $this->error(__('You have no permission'));
-            }
-        }
+        // $adminIds = $this->getDataLimitAdminIds();
+        // if (is_array($adminIds)) {
+        //     if (!in_array($row[$this->dataLimitField], $adminIds)) {
+        //         $this->error(__('You have no permission'));
+        //     }
+        // }
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
             if ($params) {

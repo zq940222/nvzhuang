@@ -137,30 +137,30 @@ class User extends Api
             $this->error('该身份证号已申请过账号', null, -3);
         }
         /*--当上级ID存在时判断上级货款是否充足--*/
-        if(!empty($superior_id)){
+        if(!empty($data['superior_id'])){
             $level = db('level')->where('id='.$data['agency_id'])->find();
-            $p_user = db('user')->where('id='.$superior_id)->find();
+            $p_user = db('user')->where('id='.$data['superior_id'])->find();
             // 如果上级ID存在 判断上级等级是否高于将要注册的等级。如果不高 去查其符合条件的上级
+            $data['inviter_id'] = $data['superior_id'];
             if($p_user['level_id'] >= $data['agency_id']){
-                $data['inviter_id'] = $superior_id;
-                $p_user_id = $this->get_parent_user($superior_id, $data['agency_id']);
+                $p_user_id = $this->get_parent_user($data['superior_id'], $data['agency_id']);
                 $data['superior_id'] = $p_user_id;
-                if($p_user_id > 0){
-                    $p_user = db('user')->where('id='.$p_user_id)->find();
-                    if($p_user['goods_payment'] < $level['goods_payment']){
-                        $message['user_id'] = $p_user_id;
-                        $message['message_category'] = 1;
-                        $message['message_title'] = '代理招募';
-                        $message['message_content'] = '您的货款资金不足，代理【'.$data['name'].'】无法招募，请及时补充！';
-                        $message['status'] = 1;
-                        $message['is_read'] = 0;
-                        $message['createtime'] = time();
-                        db('message')->insert($message);
-                        $this->error('上级资金不足，请提醒补充', null, -4);
-                    }
-                    db('user')->where('id='.$p_user_id)->setDec('goods_payment', $level['goods_payment']);
-                    db('user')->where('id='.$p_user_id)->setInc('lock_goods_money', $level['goods_payment']);
+            }
+            if($data['superior_id'] > 0){
+                $p_user = db('user')->where('id='.$data['superior_id'])->find();
+                if($p_user['goods_payment'] < $level['goods_payment']){
+                    $message['user_id'] = $data['superior_id'];
+                    $message['message_category'] = 1;
+                    $message['message_title'] = '代理招募';
+                    $message['message_content'] = '您的货款资金不足，代理【'.$data['name'].'】无法招募，请及时补充！';
+                    $message['status'] = 1;
+                    $message['is_read'] = 0;
+                    $message['createtime'] = time();
+                    db('message')->insert($message);
+                    $this->error('上级资金不足，请提醒补充', null, -4);
                 }
+                db('user')->where('id='.$data['superior_id'])->setDec('goods_payment', $level['goods_payment']);
+                db('user')->where('id='.$data['superior_id'])->setInc('lock_goods_money', $level['goods_payment']);
             }
         }
         
