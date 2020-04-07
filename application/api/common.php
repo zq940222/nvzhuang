@@ -14,6 +14,9 @@ function jsonReturn($msg,$code = -1,$data = []){
  */
 function get_http_host($url)
 {
+	if(!empty($url)){
+		$url = '/uploads'.explode('/uploads', $url)[1];
+	}
 	$return_url = 'http://'.$_SERVER['HTTP_HOST'].$url;
     
     return $return_url;

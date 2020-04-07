@@ -17,7 +17,7 @@ class Order extends Api
     //如果接口已经设置无需登录,那也就无需鉴权了
     //
     // 无需登录的接口,*表示全部
-    protected $noNeedLogin = ['get_freight','get_freight_money','get_user_address'];
+    protected $noNeedLogin = ['get_freight','get_freight_money','get_user_address','get_order_header'];
     // 无需鉴权的接口,*表示全部
     protected $noNeedRight = '*';
 
@@ -392,18 +392,19 @@ class Order extends Api
         $order['gm_money'] = $gm_money; //货款消费金额
         $order['gm_type'] = $gm_type;   //货款消费类型:1-注册升级货款消费｜2-充值货款消费
 
-        //推荐人返利  
-        if($back_money > 0){
-            db('user')->where('id='.$user['inviter_id'])->setInc('money', $back_money);
-            /*为推荐人添加流水记录*/
-            $money_log_4['user_id'] = $user['inviter_id'];
-            $money_log_4['type'] = 1;
-            $money_log_4['money'] = $back_money;
-            $money_log_4['memo'] = '返利';
-            $money_log_4['createtime'] = time();
-            $money_log[] = $money_log_4;
-            /*为推荐人添加流水记录*/
-        }
+        // //推荐人返利  
+        // if($back_money > 0){
+        //     db('user')->where('id='.$user['inviter_id'])->setInc('money', $back_money);
+        //     /*为推荐人添加流水记录*/
+        //     $money_log_4['user_id'] = $user['inviter_id'];
+        //     $money_log_4['money_type'] = 1;
+        //     $money_log_4['type'] = 1;
+        //     $money_log_4['money'] = $back_money;
+        //     $money_log_4['memo'] = '返利';
+        //     $money_log_4['createtime'] = time();
+        //     $money_log[] = $money_log_4;
+        //     /*为推荐人添加流水记录*/
+        // }
         //当上级是平台时
         if($user['superior_id'] == 0) {
             $order['shipment'] = '平台';  //出货方
@@ -430,36 +431,39 @@ class Order extends Api
                 db('message')->insert($p_user_message);
                 $this->error('上级货品不足，请联系其补货', null, -7);
             }else{
-                //当推荐人与上级是同一人时
-                if($user['superior_id'] == $user['inviter_id']) {
-                    //加到上级用户余额
-                    db('user')->where('id='.$user['superior_id'])->setInc('money', $goods_price);
-                    /*为推荐人添加流水记录*/
-                    $money_log_2['user_id'] = $p_user['id'];
-                    $money_log_2['type'] = 1;
-                    $money_log_2['money'] = $goods_price;
-                    $money_log_2['memo'] = '余额';
-                    $money_log_2['createtime'] = time();
-                    $money_log[] = $money_log_2;
-                    /*为推荐人添加流水记录*/
+                // //当推荐人与上级是同一人时
+                // if($user['superior_id'] == $user['inviter_id']) {
+                //     //加到上级用户余额
+                //     db('user')->where('id='.$user['superior_id'])->setInc('money', $goods_price);
+                //     /*为推荐人添加流水记录*/
+                //     $money_log_2['user_id'] = $p_user['id'];
+                //     $money_log_2['money_type'] = 1;
+                //     $money_log_2['type'] = 1;
+                //     $money_log_2['money'] = $goods_price;
+                //     $money_log_2['memo'] = '余额';
+                //     $money_log_2['createtime'] = time();
+                //     $money_log[] = $money_log_2;
+                //     /*为推荐人添加流水记录*/
 
-                    $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，款项已转入您的余额，请注意查收。';
-                }else{//当推荐人与上级不是同一人时 上级用户给推荐人返利
-                    //加到上级用户余额
-                    db('user')->where('id='.$user['superior_id'])->setInc('money', $goods_price - $back_money);
-                    /*为推荐人添加流水记录*/
-                    $money_log_2['user_id'] = $p_user['id'];
-                    $money_log_2['type'] = 1;
-                    $money_log_2['money'] = $goods_price - $back_money;
-                    $money_log_2['memo'] = '余额';
-                    $money_log_2['createtime'] = time();
-                    $money_log[] = $money_log_2;
-                    /*为推荐人添加流水记录*/
+                //     $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，款项已转入您的余额，请注意查收。';
+                // }else{//当推荐人与上级不是同一人时 上级用户给推荐人返利
+                //     //加到上级用户余额
+                //     db('user')->where('id='.$user['superior_id'])->setInc('money', $goods_price - $back_money);
+                //     /*为推荐人添加流水记录*/
+                //     $money_log_2['user_id'] = $p_user['id'];
+                //     $money_log_2['money_type'] = 1;
+                //     $money_log_2['type'] = 1;
+                //     $money_log_2['money'] = $goods_price - $back_money;
+                //     $money_log_2['memo'] = '余额';
+                //     $money_log_2['createtime'] = time();
+                //     $money_log[] = $money_log_2;
+                //     /*为推荐人添加流水记录*/
 
-                    $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，其中'.$back_money.'元是给其推荐人的返利，款项已转入您的余额，请注意查收。';
-                }
-                //扣除上级货款金额
+                //     $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，其中'.$back_money.'元是给其推荐人的返利，款项已转入您的余额，请注意查收。';
+                // }
+                //扣除上级货款金额添加到玉扣款字段
                 db('user')->where('id='.$user['superior_id'])->setDec('goods_payment', $p_user_goods_price);
+                db('user')->where('id='.$user['superior_id'])->setInc('lock_goods_money', $p_user_goods_price);
                 //消息通知
                 $puser_message['user_id'] = $p_user['id'];
                 $puser_message['message_category'] = 1;
@@ -471,6 +475,7 @@ class Order extends Api
                 db('message')->insert($puser_message);
                 /*添加流水记录*/
                 $money_log_1['user_id'] = $p_user['id'];
+                $money_log_1['money_type'] = 2;
                 $money_log_1['type'] = 2;
                 $money_log_1['money'] = $p_user_goods_price;
                 $money_log_1['memo'] = '下级订货货款';
@@ -482,6 +487,7 @@ class Order extends Api
                 $order['profit'] = $profit;
 
                 $money_log_5['user_id'] = $p_user['id'];
+                $money_log_5['money_type'] = 1;
                 $money_log_5['type'] = 1;
                 $money_log_5['money'] = $profit;
                 $money_log_5['memo'] = '利润';
@@ -489,6 +495,7 @@ class Order extends Api
                 $money_log[] = $money_log_5;
             }
             $money_log_3['user_id'] = $user['id'];
+            $money_log_3['money_type'] = 2;
             $money_log_3['type'] = 2;
             $money_log_3['money'] = $total_amount;
             $money_log_3['memo'] = '货款';
@@ -550,6 +557,7 @@ class Order extends Api
      *
      * @param int $user_id  用户ID
      * @param int $status  订单状态:1=待发货,2=待收货,3=已完成
+     * @param string $date  日期月份Y-m
      * @param int $page=1  数据页码
      * @param int $count=10  数据条数
      */
@@ -559,13 +567,15 @@ class Order extends Api
         $status = $this->request->request('status');
         $page = $this->request->request('page');
         $count = $this->request->request('count');
+        $date = $this->request->request('date');
         if(!$user_id) $this->error('参数user_id不能为空', null, -1);
         if(empty($status)) $status = 0;
         if(empty($page)) $page = 1;
         if(empty($count)) $count = 10;
+        if(empty($date)) $date = date("Y-m-d");
         $start = ($page - 1) * $count;
 
-        $field = 'id as order_id,order_sn,status,goods_num,total_amount,createtime';
+        $field = 'id as order_id,user_id,order_sn,status,goods_num,total_amount,createtime';
         $where = 'user_id='.$user_id;
         if($status > 0) $where .= ' and status='.$status;
 
@@ -588,10 +598,59 @@ class Order extends Api
             }
             $order[$key]['goods_data'] = $order_goods;
         }
+        $data['order_header'] = $this->get_order_header($user_id,$date);
+        $data['order_list'] = $order;
 
-        $this->success('请求成功', $order);
+        $this->success('请求成功', $data);
+        // $this->success('请求成功', $order);
     }
 
+    public function get_order_header($user_id, $date)
+    {
+        //奖励金
+        $money_info['bounty'] = db('user_bounty')->where('user_id='.$user_id.' and status="0"')->sum('money');
+        //利润
+        $money_info['profit'] = db('user_money_log')
+        ->where('memo="利润" and user_id='.$user_id)
+        ->sum('money');
+        //销售折扣（团队收益）
+        /*
+        1）招代理算业绩（招顶级不算，顶级下单算业绩）
+        2）自己一条线的订单算业绩（自己的订单算业绩）
+        */
+        $money_info['team_money'] = 0;
+        $team_money = 0;
+
+        $firstday = date('Y-m-01', strtotime($date));
+        $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
+        $firstday_time = strtotime($firstday);
+        $lastday_time = strtotime($lastday);
+        $where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
+        //1）招代理算业绩（招顶级不算，顶级下单算业绩）
+        $team_money += db("agent_apply")
+        ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
+        ->sum('pay_money');
+        //下级升级代理算业绩
+        $team_money += db("agent_upgrade")
+        ->where($where.' and status=1 and level!=1 and superior_id='.$user_id)
+        ->sum('money');
+        //2）自己一条线的订单算业绩（自己的订单算业绩）
+        $User = new User;
+        $team_money += $User->get_team_money($user_id);
+        //总销售额
+        $money_info['total_sales'] = $team_money;
+        $user = db('user')->where('id='.$user_id)->find();
+        if($user['level_id'] == 1){
+            $team_money = $team_money / 10000;
+            $back_money = db('back_money')->select();
+            foreach ($back_money as $key => $value) {
+                if($team_money > $back_money[$key]['sales']) {
+                    $money_info['team_money'] = $back_money[$key]['discount_money'];
+                }
+            }
+        }
+        return $money_info;
+    }
     /**
      * 订单详情
      *
@@ -622,11 +681,13 @@ class Order extends Api
         foreach ($order_goods as $key1 => $value1) {
             if(!empty($order_goods[$key1]['image'])) $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
             $refund_order = db('refund_order')->where('order_goods_id='.$order_goods[$key1]['order_goods_id'])->find();
-            $order_goods[$key1]['refund_order_status'] = -2;
-            $order_goods[$key1]['refund_order_id'] = '';
-            if(!empty($refund_order)) {
-                $order_goods[$key1]['refund_order_status'] = $refund_order['status'];
-                $order_goods[$key1]['refund_order_id'] = $refund_order['id'];
+            if($order['status'] < 3){
+                $order_goods[$key1]['refund_order_status'] = -2;
+                $order_goods[$key1]['refund_order_id'] = '';
+                if(!empty($refund_order) && $refund_order['refund_order_status'] != -3) {
+                    $order_goods[$key1]['refund_order_status'] = $refund_order['status'];
+                    $order_goods[$key1]['refund_order_id'] = $refund_order['id'];
+                }
             }
         }
         $order['goods_data'] = $order_goods;
@@ -763,6 +824,7 @@ class Order extends Api
      * @param int $user_id   用户ID
      * @param int $order_id  订单ID
      * @param int $order_goods_id  订单商品ID
+     * @param int $refund_type    售后类型:1=仅退款,2=退货退款(新增)
      * @param int $goods_num 退货数量
      * @param int $content   问题描述
      * @param int $images    图片
@@ -772,13 +834,17 @@ class Order extends Api
         $user_id = $this->request->request('user_id');
         $order_id = $this->request->request('order_id');
         $order_goods_id = $this->request->request('order_goods_id');
+        $refund_type = $this->request->request('refund_type');
         $goods_num = $this->request->request('goods_num');
         $content = $this->request->request('content');
         $images = $this->request->request('images');
-        if(!$user_id || !$order_id || !$order_goods_id || !$goods_num) $this->error('参数不能为空', null, -1);
+        if(!$user_id || !$order_id || !$order_goods_id || !$goods_num || !$refund_type) $this->error('参数不能为空', null, -1);
 
         $order = db('order')->where('id='.$order_id)->find();//shipping_time
-        if(time() - $order['shipping_time'] > 3600*24*20) $this->error('超出退单时间', null, -6);
+        if($order['status'] > 1){
+            if(time() - $order['shipping_time'] > 3600*24*20) $this->error('超出退单时间', null, -6);
+        }
+        
         if($user_id != $order['user_id']) $this->error('参数错误', null, -2);
         $order_goods = db('order_goods')->where('id='.$order_goods_id)->find();
         if($order_id != $order_goods['order_id']) $this->error('参数错误', null, -2);
@@ -793,6 +859,7 @@ class Order extends Api
         ->value('b.price'.$level_id);
 
         $refund_order['user_id'] = $user_id;
+        $refund_order['refund_type'] = $refund_type;
         $refund_order['order_sn'] = $order['order_sn'];
         $refund_order['order_id'] = $order_id;
         $refund_order['order_goods_id'] = $order_goods_id;
@@ -816,7 +883,7 @@ class Order extends Api
      * 退货详情
      * @param int $user_id  用户ID
      * @param int $refund_order_id  退单商品ID
-     //退货状态:-3=不可以退货,-2=可以退货,-1=审核未通过,0=等待审核,1=寄回商品,2=系统审核,3=退款完成
+     //退货状态:-3=失效,-3=不可以退货,-2=可以退货,-1=审核未通过,0=等待审核,1=寄回商品,2=系统审核,3=退款完成
      */
     public function refund_order_desc()
     {
@@ -852,6 +919,15 @@ class Order extends Api
         }
         if($refund_order['status'] == 1)
         {
+            //后台审核成功 买家发货时间为5天之内 超时退货订单失效 重新发起
+            if($refund_order['updatetime'] + 3600*24*5 > time()){
+                db('refund_order')->where('id='.$refund_order['id'])->setField('status',-3);
+                $ro = db('refund_order')->where("status>'-3' and status<'3' and order_id=".$refund_order['order_id'])->select();
+                if(empty($ro)) {
+                    db('order')->where('id='.$refund_order['order_id'])->setField('2');
+                }
+                $this->success('退货订单失效，超出发货时间，请重新发起', null, -2);
+            }
             $order_goods['refund_order_state'] = '1.退货商品，2.发货单';
         }
         if($refund_order['status'] == 2)
