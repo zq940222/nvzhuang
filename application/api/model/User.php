@@ -224,7 +224,7 @@ class User extends Model
             $message[]['user_id'] = $upgrade['new_superior_id'];
             $message[]['message_category'] = 1;
             $message[]['message_title'] = '代理升级';
-            $message[]['message_content'] = '代理上级变更成功，代理【'.$real_name.'】已升级！';
+            $message[]['message_content'] = '代理上级变更成功，代理【'.$user['real_name'].'】已升级！';
             $message[]['status'] = 1;
             $message[]['is_read'] = 0;
             $message[]['createtime'] = time();
