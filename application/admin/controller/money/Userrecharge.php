@@ -2,6 +2,7 @@
 
 namespace app\admin\controller\money;
 
+use app\api\model\User;
 use app\common\controller\Backend;
 use think\Db;
 use think\Exception;
@@ -58,7 +59,8 @@ class Userrecharge extends Backend
                 try {
                     // $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        $res = curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/recharge_apply_success?id='.$ids);
+                        $model = new User();
+                        $res = $model->recharge_apply_success($ids);
                         if(json_decode($res,true)['code'] == 1){
                             $result = true;
                         }else{
@@ -66,7 +68,7 @@ class Userrecharge extends Backend
                         }
                     }
                     if ($params['status'] == -1){
-                        $res = curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/recharge_apply_error?id='.$ids);
+                        $res = $model->recharge_apply_error($ids);
                         if(json_decode($res,true)['code'] == 1){
                             $result = true;
                         }else{
