@@ -1,6 +1,7 @@
 <?php
 namespace app\api\model;
 use think\Model;
+use think\Db;
 
 /**
  * 用户接口
@@ -20,11 +21,11 @@ class User extends Model
     public function register($apply_id)
     {
         if (!$apply_id) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }
         $data = db('agent_apply')->where('id='.$apply_id)->find();
         if($data['status'] != 1) {
-            $this->error(__('用户未过审'), null, -2);
+            return ['msg'=>'用户未过审','code'=>-2,'success'=>false];
         }
         $username = $data['mobile'];
         $password = $data['password'];
@@ -158,10 +159,10 @@ class User extends Model
 
             db('user_money_log')->insertAll($money_log);
             /*添加流水记录*/
-
+            return ['msg'=>'注册成功','code'=>1,'success'=>true];
             $this->success(__('Sign up successful'), $data);
         } else {
-            $this->error($this->auth->getError());
+            return ['msg'=>'注册失败','code'=>0,'success'=>false];
         }
     }
  
@@ -174,11 +175,11 @@ class User extends Model
     public function upgrade($id)
     {
         if (!$id) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }
         $upgrade = db('agent_upgrade')->where('id='.$id)->find();
         if($upgrade['status'] != 1) {
-            $this->error(__('用户未过审'), null, -2);
+            return ['msg'=>'用户未过审','code'=>-2,'success'=>false];
         }
         $user = db('user')->where('id='.$upgrade['user_id'])->find();
         $level = db('level')->where('id='.$upgrade['level'])->find();
@@ -295,9 +296,9 @@ class User extends Model
         $res = db('user')->where('id='.$upgrade['user_id'])->update($edit_user_data);
 
         if($res) {
-            $this->success('修改成功');
+            return ['msg'=>'修改成功','code'=>1,'success'=>true];
         }else{
-            $this->error('修改失败');
+            return ['msg'=>'修改失败','code'=>0,'success'=>false];
         }
 
     }
@@ -311,17 +312,17 @@ class User extends Model
     public function recharge_apply_success($id)
     {
         if(!$id) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }
 
         $data = db('user_recharge')
         ->where('id='.$id)
         ->find();
         if(empty($data)) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }else{
             if($data['status'] != 0) {
-                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+                return ['msg'=>'申请已审核，请勿重复操作','code'=>-4,'success'=>false];
             }
             $res = db('user')->where('id='.$data['user_id'])->setInc('goods_payment', $data['money']);
             //添加到充值货款金额字段
@@ -359,9 +360,9 @@ class User extends Model
                 $money_log[] = $money_log_1;
                 db('user_money_log')->insertAll($money_log);
                 /*添加流水记录*/
-                $this->success('成功',null,1);
+                return ['msg'=>'成功','code'=>1,'success'=>true];
             }else{
-                $this->error('失败',null,-2);
+                return ['msg'=>'失败','code'=>0,'success'=>false];
             }
         }
     }
@@ -375,20 +376,20 @@ class User extends Model
     public function recharge_apply_error($id)
     {
         if(!$id) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }
 
         $data = db('user_recharge')
         ->where('id='.$id)
         ->find();
         if(empty($data)) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }else{
             if($data['status'] != 0) {
-                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+                return ['msg'=>'申请已审核，请勿重复操作','code'=>-4,'success'=>false];
             }
             db('user_recharge')->where('id='.$data['id'])->setField('status',-1);
-            $this->success('成功',null,1);
+            return ['msg'=>'成功','code'=>1,'success'=>true];
         }
     }
 
@@ -400,24 +401,24 @@ class User extends Model
     public function withdraw_apply_success($id)
     {
         if(!$id) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }
 
         $data = db('user_withdraw')
         ->where('id='.$id)
         ->find();
         if(empty($data)) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }else{
             if($data['status'] != 0) {
-                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+                return ['msg'=>'申请已审核，请勿重复操作','code'=>-4,'success'=>false];
             }
             Db::startTrans();
             $res = db('user')->where('id='.$data['user_id'])->setDec('lock_money', $data['money']);
             $lock_money = db('user')->where('id='.$data['user_id'])->value('lock_money');
             if($lock_money < 0) {
                 Db::rollback();
-                $this->error('数据错误',null,-3);
+                return ['msg'=>'数据错误','code'=>-3,'success'=>false];
             }
             if($res) {
                 db('user_withdraw')->where('id='.$data['id'])->setField('status',1);
@@ -432,9 +433,9 @@ class User extends Model
                 db('user_money_log')->insertAll($money_log);
                 /*添加流水记录*/
                 Db::commit();
-                $this->success('成功',null,1);
+                return ['msg'=>'成功','code'=>1,'success'=>true];
             }else{
-                $this->error('失败',null,-2);
+                return ['msg'=>'失败','code'=>0,'success'=>false];
             }
         }
     }
@@ -447,17 +448,17 @@ class User extends Model
     public function withdraw_apply_error($id)
     {
         if(!$id) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }
 
         $data = db('user_withdraw')
         ->where('id='.$id)
         ->find();
         if(empty($data)) {
-            $this->error(__('无效的参数'), null, -1);
+            return ['msg'=>'无效的参数','code'=>-1,'success'=>false];
         }else{
             if($data['status'] != 0) {
-                $this->error(__('申请已审核，请勿重复操作'), null, -4);
+                return ['msg'=>'申请已审核，请勿重复操作','code'=>-4,'success'=>false];
             }
             Db::startTrans();
             $res = db('user')->where('id='.$data['user_id'])->setDec('lock_money', $data['money']);
@@ -465,14 +466,14 @@ class User extends Model
             $lock_money = db('user')->where('id='.$data['user_id'])->value('lock_money');
             if($lock_money < 0) {
                 Db::rollback();
-                $this->error('数据错误',null,-3);
+                return ['msg'=>'数据错误','code'=>-3,'success'=>false];
             }
             if($res) {
                 db('user_withdraw')->where('id='.$data['id'])->setField('status',-1);
                 Db::commit();
-                $this->success('成功',null,1);
+                return ['msg'=>'成功','code'=>1,'success'=>true];
             }else{
-                $this->error('失败',null,-2);
+                return ['msg'=>'失败','code'=>0,'success'=>false];
             }
         }
     }
