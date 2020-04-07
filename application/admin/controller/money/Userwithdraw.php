@@ -2,6 +2,7 @@
 
 namespace app\admin\controller\money;
 
+use app\api\model\User;
 use app\common\controller\Backend;
 use think\Db;
 use think\Exception;
@@ -57,8 +58,9 @@ class Userwithdraw extends Backend
                 Db::startTrans();
                 try {
                     // $result = $row->allowField(true)->save($params);
+                    $model = new User();
                     if ($params['status'] == 1){
-                        $res = curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/withdraw_apply_success?id='.$ids);
+                        $res = $model->withdraw_apply_success($ids);
                         if(json_decode($res,true)['code'] == 1){
                             $result = true;
                         }else{
@@ -66,7 +68,7 @@ class Userwithdraw extends Backend
                         }
                     }
                     if ($params['status'] == -1){
-                        $res = curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/withdraw_apply_error?id='.$ids);
+                        $res = $model->withdraw_apply_error($ids);
                         if(json_decode($res,true)['code'] == 1){
                             $result = true;
                         }else{
