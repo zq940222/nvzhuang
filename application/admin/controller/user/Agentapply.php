@@ -58,7 +58,13 @@ class Agentapply extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/register?apply_id='.$ids);
+                        $model = new \app\api\model\User();
+                        $model->register($ids);
+                    }elseif ($params['status'] == -1){
+                        if ($row['superior_id'] > 0) {
+                            Db::name('user')->where('id','=', $row['superior_id'])->setInc('goods_payment', $row['goods_payment']);
+                            Db::name('user')->where('id','=', $row['superior_id'])->setDec('lock_goods_money', $row['goods_payment']);
+                        }
                     }
                     Db::commit();
                 } catch (ValidateException $e) {

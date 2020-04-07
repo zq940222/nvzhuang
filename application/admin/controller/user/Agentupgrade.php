@@ -56,7 +56,13 @@ class Agentupgrade extends Backend
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
-                        curl_get('http://'.$_SERVER['HTTP_HOST'].'/api/user/upgrade?id='.$ids);
+                        $model = new \app\api\model\User();
+                        $model->upgrade($ids);
+                    } elseif ($params['status'] == -1){
+                        if ($row['new_superior_id'] > 0) {
+                            Db::name('user')->where('id','=', $row['new_superior_id'])->setInc('goods_payment', $row['goods_payment']);
+                            Db::name('user')->where('id','=', $row['new_superior_id'])->setDec('lock_goods_money', $row['goods_payment']);
+                        }
                     }
                     Db::commit();
                 } catch (ValidateException $e) {
