@@ -213,28 +213,28 @@ class User extends Model
             $money_log_5['createtime'] = time();
             $money_log[] = $money_log_5;
 
-            $message[]['user_id'] = $upgrade['user_id'];
-            $message[]['message_category'] = 1;
-            $message[]['message_title'] = '代理升级';
-            $message[]['message_content'] = '升级成功';
-            $message[]['status'] = 1;
-            $message[]['is_read'] = 0;
-            $message[]['createtime'] = time();
-
-            $message[]['user_id'] = $upgrade['new_superior_id'];
-            $message[]['message_category'] = 1;
-            $message[]['message_title'] = '代理升级';
-            $message[]['message_content'] = '代理上级变更成功，代理【'.$user['real_name'].'】已升级！';
-            $message[]['status'] = 1;
-            $message[]['is_read'] = 0;
-            $message[]['createtime'] = time();
-            db('message')->insertAll($message);
-
             //下级货款 - （下级货款/下级折扣 * 上级折扣）= 利润
             $p_user = db('user')->where('id='.$upgrade['new_superior_id'])->find();
             $p_level = db('level')->where('id='.$p_user['level_id'])->find();
             $profit = $level['goods_payment'] - ($level['goods_payment'] / $level['discount'] * $p_level['discount']);
             if($upgrade['superior_id'] != $upgrade['new_superior_id']){
+                $message_log_1['user_id'] = $upgrade['new_superior_id'];
+                $message_log_1['message_category'] = 1;
+                $message_log_1['message_title'] = '代理升级';
+                $message_log_1['message_content'] = '代理上级变更成功，代理【'.$user['real_name'].'】已升级！';
+                $message_log_1['status'] = 1;
+                $message_log_1['is_read'] = 0;
+                $message_log_1['createtime'] = time();
+                $message[] = $message_log_1;
+                $message_log_2['user_id'] = $upgrade['superior_id'];
+                $message_log_2['message_category'] = 1;
+                $message_log_2['message_title'] = '代理升级';
+                $message_log_2['message_content'] = '代理上级变更成功，代理【'.$user['real_name'].'】成功升级为【'.$level['name'].'】';
+                $message_log_2['status'] = 1;
+                $message_log_2['is_read'] = 0;
+                $message_log_2['createtime'] = time();
+                $message[] = $message_log_2;
+
                 $old_p_user_profit = $level['goods_payment'] * 0.1;
                 $profit -= $old_p_user_profit;
                 $money_log_7['user_id'] = $upgrade['superior_id'];
@@ -262,6 +262,15 @@ class User extends Model
                 $money_log_9['memo'] = '原上级利润分成';
                 $money_log_9['createtime'] = time();
                 $money_log[] = $money_log_9;
+            }else{
+                $message_log_1['user_id'] = $upgrade['superior_id'];
+                $message_log_1['message_category'] = 1;
+                $message_log_1['message_title'] = '代理升级';
+                $message_log_1['message_content'] = '代理【'.$user['real_name'].'】成功升级为【'.$level['name'].'】';
+                $message_log_1['status'] = 1;
+                $message_log_1['is_read'] = 0;
+                $message_log_1['createtime'] = time();
+                $message[] = $message_log_1;
             }
             $money_log_6['user_id'] = $upgrade['new_superior_id'];
             $money_log_6['money_type'] = 1;
@@ -272,6 +281,15 @@ class User extends Model
             $money_log[] = $money_log_6;
         }
         /*--如果上级存在 将上级的货款转换到余额里面END--*/
+        $message_log_3['user_id'] = $upgrade['user_id'];
+        $message_log_3['message_category'] = 1;
+        $message_log_3['message_title'] = '代理升级';
+        $message_log_3['message_content'] = '您已成功升级为【'.$level['name'].'】';
+        $message_log_3['status'] = 1;
+        $message_log_3['is_read'] = 0;
+        $message_log_3['createtime'] = time();
+        $message[] = $message_log_3;
+        db('message')->insertAll($message);
         /*添加流水记录*/
         $money_log_1['user_id'] = $upgrade['user_id'];
         $money_log_1['money_type'] = 2;
@@ -352,6 +370,14 @@ class User extends Model
             // }
             if($res) {
                 db('user_recharge')->where('id='.$data['id'])->setField('status',1);
+                $message[]['user_id'] = $data['user_id'];
+                $message[]['message_category'] = 1;
+                $message[]['message_title'] = '充值成功';
+                $message[]['message_content'] = '货款充值成功，已入账，请注意查收';
+                $message[]['status'] = 1;
+                $message[]['is_read'] = 0;
+                $message[]['createtime'] = time();
+                db('message')->insertAll($message);
                 /*添加流水记录*/
                 $money_log_1['user_id'] = $data['user_id'];
                 $money_log_1['money_type'] = 2;
