@@ -62,19 +62,19 @@
         <div class="col-xs-12 col-sm-8">
             
             <div class="radio">
-                {in name="$order.status" value="0"}
-            <label for="row[status]-0"><input id="row[status]-0" name="row[status]" type="radio" value="0" {in name="0" value="$order.status"}checked{/in} /> 等待审核</label>
+                {in name="$order.status" value="0" || name="$order.refund_type" value="1,2"}
+                <label for="row[status]-0"><input id="row[status]-0" name="row[status]" type="radio" value="0" {in name="0" value="$order.status"}checked{/in} /> 等待审核</label>
             {/in}
-                {in name="$order.status" value="0,1"}
+                {in name="$order.status" value="0,1" || name="$order.refund_type" value="2"}
                 <label for="row[status]-1"><input id="row[status]-1" name="row[status]" type="radio" value="1" {in name="1" value="$order.status"}checked{/in} /> 寄回商品</label>
             {/in}
-                {in name="$order.status" value="2"}
+                {in name="$order.status" value="2" || name="$order.refund_type" value="2"}
                 <label for="row[status]-2"><input id="row[status]-2" name="row[status]" type="radio" value="2" {in name="2" value="$order.status"}checked{/in} /> 系统审核</label>
             {/in}
-                {in name="$order.status" value="2,3"}
+                {in name="$order.status" value="2,3" || name="$order.refund_type" value="1,2"}
                 <label for="row[status]-3"><input id="row[status]-3" name="row[status]" type="radio" value="3" {in name="3" value="$order.status"}checked{/in} /> 退款完成</label>
             {/in}
-                {in name="$order.status" value="0,-1"}
+                {in name="$order.status" value="0,-1" || name="$order.refund_type" value="1,2"}
                 <label for="row[status]--1"><input id="row[status]--1" name="row[status]" type="radio" value="-1" {in name="-1" value="$order.status"}checked{/in} /> 审核未通过</label>
             {/in}
             </div>
