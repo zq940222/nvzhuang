@@ -28,19 +28,19 @@ class Order extends Model
         'status_text',
         'shipping_time_text',
         'confirm_time_text',
-        'deleted_text'
+        'is_refund_text'
     ];
     
 
     
     public function getStatusList()
     {
-        return ['1' => __('Status 1'), '2' => __('Status 2'), '3' => __('Status 3'), '4' => __('Status 4')];
+        return ['1' => __('Status 1'), '2' => __('Status 2'), '3' => __('Status 3')];
     }
 
-    public function getDeletedList()
+    public function getIsRefundList()
     {
-        return ['1' => __('Deleted 1'), '0' => __('Deleted 0')];
+        return ['1' => __('是'), '0' => __('否')];
     }
 
 
@@ -66,10 +66,10 @@ class Order extends Model
     }
 
 
-    public function getDeletedTextAttr($value, $data)
+    public function getIsRefundTextAttr($value, $data)
     {
-        $value = $value ? $value : (isset($data['deleted']) ? $data['deleted'] : '');
-        $list = $this->getDeletedList();
+        $value = $value ? $value : (isset($data['is_refund']) ? $data['is_refund'] : '');
+        $list = $this->getIsRefundList();
         return isset($list[$value]) ? $list[$value] : '';
     }
 

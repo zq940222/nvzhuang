@@ -28,7 +28,7 @@ class Order extends Backend
         parent::_initialize();
         $this->model = new \app\admin\model\Order;
         $this->view->assign("statusList", $this->model->getStatusList());
-        $this->view->assign("deletedList", $this->model->getDeletedList());
+        $this->view->assign("isRefundList", $this->model->getIsRefundList());
     }
     
     /**
