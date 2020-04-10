@@ -77,10 +77,6 @@ class Refund extends Backend
         if(empty($order)){
             $this->error('订单不存在或已被删除');
         }
-        $order->goods = db('order_goods')
-        ->field('goods_sn,goods_name as name,goods_num')
-        ->where('id='.$order->order_goods_id)
-        ->find();
         if ($this->request->isPost()) {
             $params = $this->request->post("row/a");
             if ($params['status'] == 1 && $order['status'] != 1){
@@ -103,6 +99,11 @@ class Refund extends Backend
                 $order->save(['status' => $params['status']]);
             }
             $this->success();
+        }else{
+            $order->goods = db('order_goods')
+            ->field('goods_sn,goods_name as name,goods_num')
+            ->where('id='.$order->order_goods_id)
+            ->find();
         }
         $this->assign('order', $order);
         return $this->fetch();

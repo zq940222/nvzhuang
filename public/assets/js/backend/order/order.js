@@ -27,6 +27,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {field: 'id', title: __('Id')},
                         {field: 'user_id', title: __('User_id')},
                         {field: 'order_sn', title: __('Order_sn')},
+                        {field: 'order_sn_unique', title: __('唯一订单号')},
                         {field: 'status', title: __('Status'), searchList: {"1":__('Status 1'),"2":__('Status 2'),"3":__('Status 3')}, formatter: Table.api.formatter.status},
                         {field: 'is_refund', title: __('是否退款'),searchList: {"1":__('是'),"0":__('否')}, formatter: Table.api.formatter.status},
                         {field: 'consignee', title: __('Consignee')},

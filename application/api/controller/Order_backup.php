@@ -284,45 +284,45 @@ class Order extends Api
 
         if(empty($user_address)) $this->error('地址信息错误', null, -2);
 
+        //商品总价
+        $goods_price = 0;
+        //邮费总价
+        $shipping_price = 0;
+        //商品总数量
+        $total_num = 0;
+        //订单总价
+        $total_amount = 0;
+        //给上级产生的利润 做查询记录用
+        $profit = 0;
+        //给推荐人的返利
+        $back_money = 0;
+        //不包邮商品总数量
+        $freight_total_num = 0;
+
         $goods_data = json_decode($data['goods_data'], true);
 
         $user = db('user')->where('id='.$user_id)->find();
         //计算订单总价
-        Db::startTrans();
-        //唯一订单号
-        $order_sn_unique = time().mt_rand(100000, 999999).$user_id;
         foreach ($goods_data as $key => $value) {
-            //商品总价
-            $goods_price = 0;
-            //邮费总价
-            $shipping_price = 0;
-            //订单总价
-            $total_amount = 0;
-            //给上级产生的利润 做查询记录用
-            $profit = 0;
-            //给推荐人的返利
-            $back_money = 0;
-
             $goods_id = $goods_data[$key]['goods_id'];
             $group_id = $goods_data[$key]['group_id'];
             $num = $goods_data[$key]['num'];
+            $total_num += $num;
             $price = $goods_data[$key]['price'];
 
-            //查询商品
             $goods = db('goods')->where('id='.$goods_id)->find();
-            //查询商品规格价格
             $spec_goods_price = db('spec_goods_price')->where('id='.$goods_data[$key]['group_id'])->find();
-            //判断传入价格欲实际价格是否相同
             if($price != $spec_goods_price['price'.$user['level_id']]) $this->error('传入价格错误', null, -3);
-            //判断商品上架状态
+            
             if($goods['is_on_sale'] == 0) $this->error(__('商品'.$goods['name'].'已下架'), null, -4);
-            //商品价格=商品实际价格*购买数量
-            $goods_price = $spec_goods_price['price'.$user['level_id']] * $num;
+            $goods_price += $spec_goods_price['price'.$user['level_id']] * $num;
             // 当商品不包邮时计算运费
-            $shipping_price = 0;
             if($goods['is_free_shipping'] == 0) {
-                $shipping_price = $this->get_freight(['goods_num'=>$num,'address_id'=>$user_address['id']]);
+                $freight_total_num += $goods_data[$key]['num'];
             }
+            // 剪掉商品库存和商品规格库存
+            db('goods')->where('id='.$goods_id)->setDec('store_count',$num);
+            db('spec_goods_price')->where('id='.$group_id.' and goods_id='.$goods_id)->setDec('store_count',$num);
             /*累计利润和返利金额*/
             //判断邀请人和上级是否一致
             if($user['superior_id'] != $user['inviter_id']) {
@@ -330,9 +330,9 @@ class Order extends Api
                 if($user['superior_id'] > 0) {
                     $p_user_level = db('user')->where('id='.$user['superior_id'])->value('level_id');
                     //上级拿到的利润
-                    $profit = ($spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level]) / 2;
+                    $profit += ($spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level]) / 2;
                     //推荐人拿到的返利
-                    $back_money = ($spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level]) / 2;
+                    $back_money += ($spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level]) / 2;
                 }
                 //当上级是平台时 推荐人的返利将由平台提供
                 if($user['superior_id'] == 0) {
@@ -340,170 +340,181 @@ class Order extends Api
                     $p_user_level = db('user')->where('id='.$user['inviter_id'])->value('level_id');
                     //查询等级返利比例
                     $rebate = db('level')->where('id='.$p_user_level)->value('rebate');
-                    $back_money = $spec_goods_price['price'.$user['level_id']] * $rebate;
+                    $back_money += $spec_goods_price['price'.$user['level_id']] * $rebate;
                 }
             }else{
                 $p_user_level = db('user')->where('id='.$user['superior_id'])->value('level_id');
                 //上级拿到的利润
-                $profit = $spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level];
+                $profit += $spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level];
             }
             /*累计利润和返利金额*/
-            //计算订单总价格和所有订单累计价格
-            $total_amount = $goods_price + $shipping_price;
-            if($user['goods_payment'] - $total_amount < 0) {
-                $this->error('货款不足，请充值', null, -5);
-            } else {
-                db('user')->where('id='.$user_id)->setDec('goods_payment', $total_amount);
-                //判断用户货款剩余与充值货款剩余是否相等
-                if($user['goods_payment'] == $user['recharge_goods_money']){
-                    $goods_data[$key]['gm_money'] = $total_amount;
-                    $goods_data[$key]['gm_type'] = 2;
+            
+        }
+        //当不包邮购买数量大于0 并且用户地址信息不为空时
+        if($freight_total_num > 0){
+            if(!empty($user_address['id'])) {
+                $shipping_price = $this->get_freight(['goods_num'=>$freight_total_num,'address_id'=>$user_address['id']]);
+            }
+        }
+        $total_amount = $goods_price + $shipping_price;
+
+        if($user['goods_payment'] - $total_amount < 0) {
+            $this->error('货款不足，请充值', null, -5);
+        } else {
+            db('user')->where('id='.$user_id)->setDec('goods_payment', $total_amount);
+            if($user['goods_payment'] == $user['recharge_goods_money']){
+                $gm_money = $total_amount;
+                $gm_type = 2;
+            }else{
+                if($user['goods_payment'] - $user['recharge_goods_money'] >= $total_amount){
+                    $gm_money = 0;
+                    $gm_type = 1;
                 }else{
-                    if($user['goods_payment'] - $user['recharge_goods_money'] >= $total_amount){
-                        $goods_data[$key]['gm_money'] = 0;
-                        $goods_data[$key]['gm_type'] = 1;
-                    }else{
-                        $goods_data[$key]['gm_money'] = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
-                        $goods_data[$key]['gm_type'] = 2;
-                    }
+                    $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                    $gm_type = 2;
                 }
             }
-            //生成订单
-            $order = array();
-            $order['user_id'] = $user_id;
-            $order['order_sn'] = time().mt_rand(1000, 9999).$user_id;
-            $order['order_sn_unique'] = $order_sn_unique;
-            $order['consignee'] = $user_address['consignee'];
-            $order['province_id'] = $user_address['province_id'];
-            $order['city_id'] = $user_address['city_id'];
-            $order['area_id'] = $user_address['area_id'];
-            $order['address'] = $user_address['address'];
-            $order['mobile'] = $user_address['mobile'];
-            $order['goods_price'] = $goods_price;
-            $order['shipping_price'] = $shipping_price;
-            $order['order_amount'] = $total_amount;
-            $order['total_amount'] = $total_amount;
-            $order['gm_money'] = $goods_data[$key]['gm_money']; //货款消费金额
-            $order['gm_type'] = $goods_data[$key]['gm_type'];   //货款消费类型:1-注册升级货款消费｜2-充值货款消费
-            // //推荐人返利  
-            if($back_money > 0){
-                $order['back_money'] = $back_money;
-            }
-            //当上级是平台时
-            if($user['superior_id'] == 0) {
-                $order['shipment'] = '平台';  //出货方
-                $order['shipment_id'] = 0;  //出货方ID
-            }else{
-                /*当前消费方式为充值货款消费时*/
-                //查看上级代理货款是否充足
-                if($goods_data[$key]['gm_type'] == 2){
-                    $p_user = db('user')->where('id='.$user['superior_id'])->find();
-                    //上级拿货价
-                    //判断邀请人和上级是否一致
-                    if($user['superior_id'] == $user['inviter_id']) {
-                        $p_user_goods_price = $goods_data[$key]['gm_money'] - $shipping_price - $profit;
-                    }else{
-                        $p_user_goods_price = $goods_data[$key]['gm_money'] - $shipping_price - $profit - $back_money;
-                    }
-                    
-                    if($p_user['goods_payment'] - $p_user_goods_price < 0) {
-                        $p_user_message['user_id'] = $p_user['id'];
-                        $p_user_message['message_category'] = 1;
-                        $p_user_message['message_title'] = '代理订货通知';
-                        $p_user_message['message_content']='您的代理'.$user['nickname'].'将要提货'.$p_user_goods_price.'元，您的货款剩余不足，请及时补货。';
-                        $p_user_message['status'] = 1;
-                        $p_user_message['is_read'] = 0;
-                        $p_user_message['createtime'] = time();
-                        db('message')->insert($p_user_message);
-                        $this->error('上级货品不足，请联系其补货', null, -7);
-                    }else{
-                        //当推荐人与上级是同一人时
-                        if($user['superior_id'] == $user['inviter_id']) {
-                            $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，货款已扣除。';
-                        }else{//当推荐人与上级不是同一人时 上级用户给推荐人返利
-                            $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，其中'.$back_money.'元是给其推荐人的返利。货款已扣除。';
-                        }
-                        //扣除上级货款金额添加到玉扣款字段
-                        db('user')->where('id='.$user['superior_id'])->setDec('goods_payment', $p_user_goods_price);
-                        db('user')->where('id='.$user['superior_id'])->setInc('lock_goods_money', $p_user_goods_price);
-                        //消息通知
-                        $puser_message['user_id'] = $p_user['id'];
-                        $puser_message['message_category'] = 1;
-                        $puser_message['message_title'] = '代理订货通知';
-                        $puser_message['message_content'] = $message_content;
-                        $puser_message['status'] = 1;
-                        $puser_message['is_read'] = 0;
-                        $puser_message['createtime'] = time();
-                        db('message')->insert($puser_message);
-                        /*添加流水记录*/
-                        $money_log_1['user_id'] = $p_user['id'];
-                        $money_log_1['money_type'] = 2;
-                        $money_log_1['type'] = 2;
-                        $money_log_1['money'] = $p_user_goods_price;
-                        $money_log_1['memo'] = '下级订货货款';
-                        $money_log_1['createtime'] = time();
-                        $money_log[] = $money_log_1;
-                        /*添加流水记录*/
-                    }
-                    if($profit > 0) {
-                        $order['profit'] = $profit;
-                    }
-                }
-                /*当前消费方式为充值货款消费时END*/
-                $money_log_3['user_id'] = $user['id'];
-                $money_log_3['money_type'] = 2;
-                $money_log_3['type'] = 2;
-                $money_log_3['money'] = $total_amount;
-                $money_log_3['memo'] = '货款';
-                $money_log_3['createtime'] = time();
-                $money_log[] = $money_log_3;
-
-                $order['shipment'] = $p_user['nickname'];   //出货方
-                $order['shipment_id'] = $p_user['id'];      //出货方ID
-            }
-            //添加数据
-            if(!empty($money_log)) {
-                db('user_money_log')->insertAll($money_log);
-            }
-            $order['goods_num'] = $num;
-            $order['createtime'] = time();
-            //生成订单
-            $order_id = db('order')->insertGetId($order);
-            //生成订单商品详情
-            $order_goods = array();
-            $order_goods['order_id'] = $order_id;
-            $order_goods['goods_id'] = $goods_data[$key]['goods_id'];
-            $order_goods['goods_name'] = $goods['name'];
-            $order_goods['goods_sn'] = $goods['goods_sn'];
-            $order_goods['goods_num'] = $goods_data[$key]['num'];
-            $order_goods['item_id'] = $goods_data[$key]['group_id'];
-            $spec_goods_price = db('spec_goods_price')->where('id='.$goods_data[$key]['group_id'])->find();
-            $order_goods['spec_key'] = $spec_goods_price['key'];
-            $order_goods['spec_key_name'] = $spec_goods_price['key_name'];
-            $order_goods_res = db('order_goods')->insert($order_goods);
-            if(!$order_goods_res) {
-                // 回滚事务
-                Db::rollback();
-                $this->error('订单创建失败，请稍后再试', null, -6);
-            }else{
-                //建立订单日志记录
-                $log_order = array();
-                $log_order['user_id'] = $user_id;
-                $log_order['order_id'] = $order_id;
-                $log_order['log_desc'] = '下单成功';
-                $log_order['createtime'] = time();
-                db('log_order')->insert($log_order);
-                // 剪掉商品库存和商品规格库存
-                db('goods')->where('id='.$goods_id)->setDec('store_count',$num);
-                db('spec_goods_price')->where('id='.$group_id.' and goods_id='.$goods_id)->setDec('store_count',$num);
-            }
-
             
         }
 
-        // 提交事务
-        Db::commit();
-        $this->error('下单成功', $order['order_sn'], 1);
+        //生成订单
+        Db::startTrans();
+        $order = array();
+        $order['user_id'] = $user_id;
+        $order['order_sn'] = time().mt_rand(1000, 9999).$user_id;
+        $order['consignee'] = $user_address['consignee'];
+        $order['province_id'] = $user_address['province_id'];
+        $order['city_id'] = $user_address['city_id'];
+        $order['area_id'] = $user_address['area_id'];
+        $order['address'] = $user_address['address'];
+        $order['mobile'] = $user_address['mobile'];
+        $order['goods_price'] = $goods_price;
+        $order['shipping_price'] = $shipping_price;
+        $order['order_amount'] = $total_amount;
+        $order['total_amount'] = $total_amount;
+        $order['gm_money'] = $gm_money; //货款消费金额
+        $order['gm_type'] = $gm_type;   //货款消费类型:1-注册升级货款消费｜2-充值货款消费
+
+        // //推荐人返利  
+        if($back_money > 0){
+            $order['back_money'] = $back_money;
+        }
+        //当上级是平台时
+        if($user['superior_id'] == 0) {
+            $order['shipment'] = '平台';  //出货方
+            $order['shipment_id'] = 0;  //出货方ID
+        }else{
+            //查看上级代理货款是否充足
+            $p_user = db('user')->where('id='.$user['superior_id'])->find();
+            //上级拿货价
+            //判断邀请人和上级是否一致
+            if($user['superior_id'] == $user['inviter_id']) {
+                $p_user_goods_price = $goods_price - $profit;
+            }else{
+                $p_user_goods_price = $goods_price - $profit - $back_money;
+            }
+            
+            if($p_user['goods_payment'] - $p_user_goods_price < 0) {
+                $p_user_message['user_id'] = $p_user['id'];
+                $p_user_message['message_category'] = 1;
+                $p_user_message['message_title'] = '代理订货通知';
+                $p_user_message['message_content']='您的代理'.$user['nickname'].'将要提货'.$p_user_goods_price.'元，您的货款剩余不足，请及时补货。';
+                $p_user_message['status'] = 1;
+                $p_user_message['is_read'] = 0;
+                $p_user_message['createtime'] = time();
+                db('message')->insert($p_user_message);
+                $this->error('上级货品不足，请联系其补货', null, -7);
+            }else{
+                //当推荐人与上级是同一人时
+                if($user['superior_id'] == $user['inviter_id']) {
+                    $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，货款已扣除。';
+                }else{//当推荐人与上级不是同一人时 上级用户给推荐人返利
+                    $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，其中'.$back_money.'元是给其推荐人的返利。货款已扣除。';
+                }
+                //扣除上级货款金额添加到玉扣款字段
+                db('user')->where('id='.$user['superior_id'])->setDec('goods_payment', $p_user_goods_price);
+                db('user')->where('id='.$user['superior_id'])->setInc('lock_goods_money', $p_user_goods_price);
+                //消息通知
+                $puser_message['user_id'] = $p_user['id'];
+                $puser_message['message_category'] = 1;
+                $puser_message['message_title'] = '代理订货通知';
+                $puser_message['message_content'] = $message_content;
+                $puser_message['status'] = 1;
+                $puser_message['is_read'] = 0;
+                $puser_message['createtime'] = time();
+                db('message')->insert($puser_message);
+                /*添加流水记录*/
+                $money_log_1['user_id'] = $p_user['id'];
+                $money_log_1['money_type'] = 2;
+                $money_log_1['type'] = 2;
+                $money_log_1['money'] = $p_user_goods_price;
+                $money_log_1['memo'] = '下级订货货款';
+                $money_log_1['createtime'] = time();
+                $money_log[] = $money_log_1;
+                /*添加流水记录*/
+            }
+            if($profit > 0) {
+                $order['profit'] = $profit;
+            }
+            $money_log_3['user_id'] = $user['id'];
+            $money_log_3['money_type'] = 2;
+            $money_log_3['type'] = 2;
+            $money_log_3['money'] = $total_amount;
+            $money_log_3['memo'] = '货款';
+            $money_log_3['createtime'] = time();
+            $money_log[] = $money_log_3;
+            
+
+            $order['shipment'] = $p_user['nickname'];   //出货方
+            $order['shipment_id'] = $p_user['id'];      //出货方ID
+        }
+        if(!empty($money_log)) {
+            db('user_money_log')->insertAll($money_log);
+        }
+        
+        $order['goods_num'] = $total_num;
+        $order['createtime'] = time();
+        $order_id = db('order')->insertGetId($order);
+        //生成订单商品详情
+        $order_goods = array();
+        foreach ($goods_data as $key => $value) {
+            $goods = db('goods')->where('id='.$goods_data[$key]['goods_id'])->find();
+            $order_goods[$key]['order_id'] = $order_id;
+            $order_goods[$key]['goods_id'] = $goods_data[$key]['goods_id'];
+            $order_goods[$key]['goods_name'] = $goods['name'];
+            $order_goods[$key]['goods_sn'] = $goods['goods_sn'];
+            $order_goods[$key]['goods_num'] = $goods_data[$key]['num'];
+            $order_goods[$key]['item_id'] = $goods_data[$key]['group_id'];
+            $spec_goods_price = db('spec_goods_price')->where('id='.$goods_data[$key]['group_id'])->find();
+            $order_goods[$key]['spec_key'] = $spec_goods_price['key'];
+            $order_goods[$key]['spec_key_name'] = $spec_goods_price['key_name'];
+        }
+        $order_goods_res = db('order_goods')->insertAll($order_goods);
+        //判断处理条数与实际数据条数是否相等
+        if($order_goods_res != count($order_goods)) {
+            // 回滚事务
+            Db::rollback();
+            $this->error('订单创建失败，请稍后再试', null, -6);
+        }else{
+            //建立订单日志记录
+            $log_order = array();
+            $log_order['user_id'] = $user_id;
+            $log_order['order_id'] = $order_id;
+            $log_order['log_desc'] = '下单成功';
+            $log_order['createtime'] = time();
+            db('log_order')->insert($log_order);
+
+            $goods_payment = db('user')->where('id='.$user_id)->value('goods_payment');
+            if($goods_payment < 0) {
+                // 回滚事务
+                Db::rollback();
+                $this->error('货款不足，请充值', null, -5);
+            }else{
+                // 提交事务
+                Db::commit();
+                $this->error('下单成功', $order['order_sn'], 1);
+            }
+        }
     }
 
     /**
@@ -526,7 +537,7 @@ class Order extends Api
         if(empty($status)) $status = 0;
         if(empty($page)) $page = 1;
         if(empty($count)) $count = 10;
-        if(empty($date)) $date = date("Y-m");
+        if(empty($date)) $date = date("Y-m-d");
         $firstday = date('Y-m-01', strtotime($date));
         $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
         $firstday_time = strtotime($firstday);
@@ -592,6 +603,8 @@ class Order extends Api
         */
         $money_info['team_money'] = 0;
         $team_money = 0;
+
+
         //1）招代理算业绩（招顶级不算，顶级下单算业绩）
         $team_money += db("agent_apply")
         ->where($where.' and status="1" and agency_id!=1 and superior_id='.$user_id)
@@ -607,58 +620,12 @@ class Order extends Api
         $money_info['total_sales'] = $team_money;
         $user = db('user')->where('id='.$user_id)->find();
         if($user['level_id'] == 1){
-            $back_money = db('back_money')->order('id','desc')->select();
-            //查询所有该用户邀请过来的一级代理
-            $inviter_user = db('user')->where('status="1" and level_id=1 and inviter_id='.$user_id)->column('id');
-            if(empty($inviter_user)){
-                //计算销售折扣
-                $new_team_money = $team_money / 10000;
-                foreach ($back_money as $key => $value) {
-                    if($new_team_money > $back_money[$key]['sales']) {
-                        $money_info['team_money'] = $team_money * $back_money[$key]['discount'];
-                    }
+            $new_team_money = $team_money / 10000;
+            $back_money = db('back_money')->select();
+            foreach ($back_money as $key => $value) {
+                if($new_team_money > $back_money[$key]['sales']) {
+                    $money_info['team_money'] = $team_money * $back_money[$key]['discount'];
                 }
-            }else{
-                //如果当前用户有团队 并且时团队老大时
-                //获取团队总销售额
-                $total_inviter_team_money = $team_money;
-                $total_inviter_discount_money = 0;
-                //获取团队其他成员销售额和销售折扣
-                foreach ($inviter_user as $key => $value) {
-                    $inviter_team_money = 0;
-                    $inviter_discount_money = 0;
-                    //1）招代理算业绩（招顶级不算，顶级下单算业绩）
-                    $inviter_team_money += db("agent_apply")
-                    ->where($where.' and status="1" and agency_id!=1 and superior_id='.$inviter_user[$key]['id'])
-                    ->sum('pay_money');
-                    //下级升级代理算业绩
-                    $inviter_team_money += db("agent_upgrade")
-                    ->where($where.' and status="1" and level!=1 and superior_id='.$inviter_user[$key]['id'])
-                    ->sum('money');
-                    //2）自己一条线的订单算业绩（自己的订单算业绩）
-                    $inviter_team_money += $User->get_team_money($inviter_user[$key]['id'],' and '.$where);
-                    //计算销售折扣
-                    $new_inviter_team_money = $inviter_team_money / 10000;
-                    foreach ($back_money as $key => $value) {
-                        if($new_inviter_team_money > $back_money[$key]['sales']) {
-                            //销售折扣
-                            $inviter_discount_money = $inviter_team_money * $back_money[$key]['discount'];
-                        }
-                    }
-                    //累加其他所有成员销售折扣总和
-                    $total_inviter_discount_money += $inviter_discount_money;
-                    //累加团队销售额
-                    $total_inviter_team_money += $inviter_team_money;
-                }
-                //计算团队销售总额销售折扣(为团队老大的总销售折扣)
-                $new_total_inviter_team_money = $total_inviter_team_money / 10000;
-                foreach ($back_money as $key => $value) {
-                    if($new_total_inviter_team_money > $back_money[$key]['sales']) {
-                        $total_inviter_discount_team_money = $total_inviter_team_money * $back_money[$key]['discount'];
-                    }
-                }
-                //当前用户所获的的销售折扣 = 当前团队的总销售折扣 - 其他团队成员销售折扣
-                $money_info['team_money'] = $total_inviter_discount_team_money - $total_inviter_discount_money;
             }
         }
         return $money_info;

@@ -54,7 +54,7 @@ class Cart extends Api
 
         if($lprice != $spec_goods_price) $this->error('传入价格与实际不符', null, -5);
 
-        db('spec_goods_price')->where('id',$goods_spec_id)->setDec('store_count', $num);
+        // db('spec_goods_price')->where('id',$goods_spec_id)->setDec('store_count', $num);
 
         $data['createtime'] = time();
 
@@ -105,7 +105,7 @@ class Cart extends Api
         $user_id = $this->request->request('user_id');
 
         if(empty($cart_ids) || empty($user_id)){
-            if(empty($user_id)) $this->error('参数不能为空', null, -1);
+            $this->error('参数不能为空', null, -1);
         }
         $cart = db('cart')->where('user_id='.$user_id.' and cart_id in ('.$cart_ids.')')->select();
         if(empty($cart)) {
@@ -122,7 +122,35 @@ class Cart extends Api
         }
     }
 
+    /**
+      *修改购物车商品数量
+      * @param string cart_id  购物车商品ID
+      * @param int $user_id  用户id
+      * @param int $num  购买数量
+    */
+    public function edit_cart_goods_num()
+    {
+        $cart_id = $this->request->request('cart_id');
+        $user_id = $this->request->request('user_id');
+        $num = $this->request->request('num');
 
+        if(empty($cart_ids) || empty($user_id) || empty($num)){
+            $this->error('参数不能为空', null, -1);
+        }
+        $cart = db('cart')->where('user_id='.$user_id.' and cart_id='.$cart_id)->find();
+        if(empty($cart)) {
+            $this->error('购物车商品不存在', null, -2);
+        }
+        $res = db('cart')
+        ->where('cart_id='.$cart_id)
+        ->setField('num',$num);
+
+        if($res){
+            $this->success('操作成功');
+        }else{
+            $this->error('操作失败');
+        }
+    }
 
 
 

@@ -55,13 +55,17 @@ class User extends Model
         if ($ret) {
             /*--如果上级存在 将上级的货款转换到余额里面--*/
             if(!empty($p_user) && $extend['superior_id'] > 0){
-                db('user')->where('id='.$extend['superior_id'])->setDec('lock_goods_money', $level['goods_payment']);
-                db('user')->where('id='.$extend['superior_id'])->setInc('money', $level['goods_payment']);
+                //计算上级成本价
+                $p_level = db('level')->where('id='.$p_user['level_id'])->find();
+                $p_goods_payment = ($level['goods_payment'] / $level['discount']) * $p_level['discount'];
+
+                db('user')->where('id='.$extend['superior_id'])->setDec('lock_goods_money', $p_goods_payment);
+                db('user')->where('id='.$extend['superior_id'])->setInc('money', $p_goods_payment);
                 /*添加流水记录*/
                 $money_log_4['user_id'] = $extend['superior_id'];
                 $money_log_4['money_type'] = 2;
                 $money_log_4['type'] = 2;
-                $money_log_4['money'] = $level['goods_payment'];
+                $money_log_4['money'] = $p_goods_payment;
                 $money_log_4['memo'] = '货款';
                 $money_log_4['createtime'] = time();
                 $money_log[] = $money_log_4;
@@ -69,7 +73,7 @@ class User extends Model
                 $money_log_5['user_id'] = $extend['superior_id'];
                 $money_log_5['money_type'] = 1;
                 $money_log_5['type'] = 1;
-                $money_log_5['money'] = $level['goods_payment'];
+                $money_log_5['money'] = $p_goods_payment;
                 $money_log_5['memo'] = '余额';
                 $money_log_5['createtime'] = time();
                 $money_log[] = $money_log_5;
@@ -83,11 +87,12 @@ class User extends Model
                 $message['createtime'] = time();
                 db('message')->insert($message);
 
-                //下级货款 - （下级货款/下级折扣 * 上级折扣）= 利润
+                //上级的利润 = 下级货款 - 上级成本价
                 $p_level = db('level')->where('id='.$p_user['level_id'])->find();
-                $profit = $level['goods_payment'] - ($level['goods_payment'] / $level['discount'] * $p_level['discount']);
+                $profit = $level['goods_payment'] - $p_goods_payment;
                 if($data['superior_id'] != $data['inviter_id'] && $data['inviter_id'] > 0){
-                    $old_p_user_profit = $level['goods_payment'] * 0.1;
+                    //当邀请人与上级不一致时 在上级成本价里拿出10%给邀请人作为分成
+                    $old_p_user_profit = $p_goods_payment * 0.1;
                     $profit -= $old_p_user_profit;
                     $money_log_7['user_id'] = $data['inviter_id'];
                     $money_log_7['money_type'] = 1;
@@ -194,13 +199,13 @@ class User extends Model
         db('user')->where('id='.$upgrade['user_id'])->setInc('margin', $level['margin']);
         /*--如果上级存在 将上级的货款转换到余额里面--*/
         if($upgrade['new_superior_id'] > 0){
-            db('user')->where('id='.$upgrade['new_superior_id'])->setDec('lock_goods_money', $level['goods_payment']);
-            db('user')->where('id='.$upgrade['new_superior_id'])->setInc('money', $level['goods_payment']);
+            db('user')->where('id='.$upgrade['new_superior_id'])->setDec('lock_goods_money', $upgrade['goods_payment']);
+            db('user')->where('id='.$upgrade['new_superior_id'])->setInc('money', $upgrade['goods_payment']);
             /*添加流水记录*/
             $money_log_4['user_id'] = $upgrade['new_superior_id'];
             $money_log_4['money_type'] = 2;
             $money_log_4['type'] = 2;
-            $money_log_4['money'] = $level['goods_payment'];
+            $money_log_4['money'] = $upgrade['goods_payment'];
             $money_log_4['memo'] = '货款';
             $money_log_4['createtime'] = time();
             $money_log[] = $money_log_4;
@@ -208,7 +213,7 @@ class User extends Model
             $money_log_5['user_id'] = $upgrade['new_superior_id'];
             $money_log_5['money_type'] = 1;
             $money_log_5['type'] = 1;
-            $money_log_5['money'] = $level['goods_payment'];
+            $money_log_5['money'] = $upgrade['goods_payment'];
             $money_log_5['memo'] = '余额';
             $money_log_5['createtime'] = time();
             $money_log[] = $money_log_5;
@@ -216,7 +221,10 @@ class User extends Model
             //下级货款 - （下级货款/下级折扣 * 上级折扣）= 利润
             $p_user = db('user')->where('id='.$upgrade['new_superior_id'])->find();
             $p_level = db('level')->where('id='.$p_user['level_id'])->find();
-            $profit = $level['goods_payment'] - ($level['goods_payment'] / $level['discount'] * $p_level['discount']);
+            //上级成本价
+            $p_goods_payment = ($level['goods_payment'] / $level['discount']) * $p_level['discount'];
+            //上级利润
+            $profit = $level['goods_payment'] - $p_goods_payment;
             if($upgrade['superior_id'] != $upgrade['new_superior_id']){
                 $message_log_1['user_id'] = $upgrade['new_superior_id'];
                 $message_log_1['message_category'] = 1;
@@ -234,8 +242,8 @@ class User extends Model
                 $message_log_2['is_read'] = 0;
                 $message_log_2['createtime'] = time();
                 $message[] = $message_log_2;
-
-                $old_p_user_profit = $level['goods_payment'] * 0.1;
+                //推荐人获得的返利
+                $old_p_user_profit = $p_goods_payment * 0.1;
                 $profit -= $old_p_user_profit;
                 $money_log_7['user_id'] = $upgrade['superior_id'];
                 $money_log_7['money_type'] = 1;
