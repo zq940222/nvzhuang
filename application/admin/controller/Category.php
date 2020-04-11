@@ -20,7 +20,7 @@ class Category extends Backend
      */
     protected $model = null;
     protected $categorylist = [];
-    protected $noNeedRight = ['selectpage'];
+    protected $noNeedRight = ['selectpage','searchlist'];
 
     public function _initialize()
     {
@@ -141,5 +141,23 @@ class Category extends Backend
     public function selectpage()
     {
         return parent::selectpage();
+    }
+
+    /**
+     * 搜索下拉列表
+     */
+    public function searchlist($type = null)
+    {
+        $where = [];
+        if (!empty($type)){
+            $where['type'] = $type;
+        }
+        $result = $this->model->where($where)->select();
+        $searchlist = [];
+        foreach ($result as $key => $value) {
+            $searchlist[] = ['id' => $value['id'], 'name' => $value['name']];
+        }
+        $data = ['searchlist' => $searchlist];
+        $this->success('', null, $data);
     }
 }

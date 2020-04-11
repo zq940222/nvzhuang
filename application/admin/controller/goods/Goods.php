@@ -257,4 +257,5 @@ class Goods extends Backend
         }
         return $keyName;
     }
+
 }
