@@ -58,8 +58,9 @@ class Userrecharge extends Backend
                 Db::startTrans();
                 try {
                     // $result = $row->allowField(true)->save($params);
+                    $model = new User();
                     if ($params['status'] == 1){
-                        $model = new User();
+                        
                         $res = $model->recharge_apply_success($ids);
                         if($res['code'] == 1){
                             $result = true;

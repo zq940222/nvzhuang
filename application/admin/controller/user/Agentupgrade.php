@@ -64,9 +64,12 @@ class Agentupgrade extends Backend
                             $result = false;
                         }
                     } elseif ($params['status'] == -1){
-                        if ($row['new_superior_id'] > 0) {
-                            Db::name('user')->where('id','=', $row['new_superior_id'])->setInc('goods_payment', $row['goods_payment']);
-                            Db::name('user')->where('id','=', $row['new_superior_id'])->setDec('lock_goods_money', $row['goods_payment']);
+                        $model = new \app\api\model\User();
+                        $res = $model->upgrade_error($ids);
+                        if($res['code'] == 1){
+                            $result = true;
+                        }else{
+                            $result = false;
                         }
                     }
                     Db::commit();

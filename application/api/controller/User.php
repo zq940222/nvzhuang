@@ -32,6 +32,12 @@ class User extends Api
         ->where('id='.$user_id)
         ->find();
         $user['level_name'] = db('level')->where('id='.$user['level_id'])->value('nickname');
+        if($user['superior_id'] > 0){
+            $user['superior_mobile'] = db('user')->where('id='.$user['superior_id'])->value('mobile');
+        }else{
+            $user['superior_mobile'] = '';
+        }
+        
         if(!empty($user['avatar'])) $user['avatar'] = get_http_host($user['avatar']);
         $this->success('请求成功', $user);
     }
@@ -105,7 +111,7 @@ class User extends Api
     {
         $superior_id = $this->request->request('superior_id');
         if(!empty($superior_id)){
-            $data['superior_id'] = $superior_id;
+            $data['inviter_id'] = $superior_id;
         }
         $data['agency_id'] = $this->request->request('agency_id');
         $data['name'] = $this->request->request('name');
@@ -121,14 +127,15 @@ class User extends Api
         $data['avatar'] = $this->request->request('avatar');
         $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
         $level = db('level')->where('id='.$data['agency_id'])->find();
-        $data['goods_payment'] = $level['goods_payment'];
+        
         foreach ($data as $key => $value) {
             if(!$value) {
                 $this->error(__('无效的参数 : '.$key), null, -1);
             }
         }
+        $data['goods_payment'] = 0;
         $data['remarks'] = $this->request->request('remarks');
-        $mobile = db('user')->where('status=1 and mobile="'.$data['mobile'].'"')->find();
+        $mobile = db('user')->where('status="1" and mobile="'.$data['mobile'].'"')->find();
         if(!empty($mobile)) {
             $this->error('账号已存在', null, -3);
         }
@@ -139,71 +146,241 @@ class User extends Api
         // }
         /****验证码验证end****/
         /*--申请一个身份证一个账号--*/
-        $user = db('user')->where('status=1 and real_name="'.$data['name'].'" and id_card="'.$data['id_card'].'"')->find();
+        $user = db('user')->where('status="1" and real_name="'.$data['name'].'" and id_card="'.$data['id_card'].'"')->find();
         if(!empty($user)) {
             $this->error('该身份证号已申请过账号', null, -3);
         }
-        /*--当上级ID存在时判断上级货款是否充足--*/
-        if(!empty($data['superior_id'])){
-            
-            $p_user = db('user')->where('id='.$data['superior_id'])->find();
-            // 如果上级ID存在 判断上级等级是否高于将要注册的等级。如果不高 去查其符合条件的上级
-            $data['inviter_id'] = $data['superior_id'];
-            if($p_user['level_id'] >= $data['agency_id']){
-                //递归查询最终上级ID
-                $p_user_id = $this->get_parent_user($data['superior_id'], $data['agency_id']);
-                $data['superior_id'] = $p_user_id;
+        Db::startTrans();
+        //先判断邀请人id是否存在
+        if(!empty($data['inviter_id'])){
+            //判断邀请人等级和注册人等级
+            $inviter_user = db('user')->where('id='.$data['inviter_id'])->find();
+            //如果邀请人等级和注册人等级相等
+            if($inviter_user['level_id'] == $data['agency_id']){
+                //判断邀请人等级是否是一级，如果是一级，那么注册人也是1级，那么注册人的走货上级为平台，注册成功后给推荐人
+                if($inviter_user['level_id'] == 1){
+                    $data['superior_id'] = 0;
+                }else{
+                    //如果不是一级 递归去查最终走货上级
+                    //递归查询最终上级ID
+                    $p_user_id = $this->get_parent_user($data['inviter_id'], $data['agency_id']);
+                    $data['superior_id'] = $p_user_id;
+                }
+            }else{
+                //如果不想等，那么邀请人和走货上级为同一人
+                $data['superior_id'] = $superior_id;
             }
+
+            $Common = new Common;
             if($data['superior_id'] > 0){
-                $p_level = db('level')->where('id='.$p_user['level_id'])->find();
-                //计算上级成本价
-                $p_goods_payment = ($level['goods_payment'] / $level['discount']) * $p_level['discount'];
-                if($p_user['goods_payment'] < $p_goods_payment){
-                    $message['user_id'] = $data['superior_id'];
-                    $message['message_category'] = 1;
-                    $message['message_title'] = '代理招募';
-                    $message['message_content'] = '您的货款资金不足，代理【'.$data['name'].'】无法招募，请及时补充！';
-                    $message['status'] = 1;
-                    $message['is_read'] = 0;
-                    $message['createtime'] = time();
-                    db('message')->insert($message);
+                $superior_user = db('user')->where('id='.$data['superior_id'])->find();
+                //计算上级成本价,如果注册成功从上级所获利润中拿出（注册人需交的货款额*0.1）给推荐人作为推荐奖励（加到推荐人余额里）
+                $superior_level = db('level')->where('id='.$superior_user['level_id'])->find();
+                $superior_goods_payment = ($level['goods_payment'] / $level['discount']) * $superior_level['discount'];
+                $data['goods_payment'] = $superior_goods_payment;
+                //如果货款不足，提醒充值
+                if($superior_user['goods_payment'] < $superior_goods_payment){
+                    //给走货上级发送的代理申请消息
+                    $message_template = db('message_template')->where('id=1')->find();
+                    $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
+                    $content2 = str_replace('level_name', $level['name'], $content1);
+                    $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
                     $this->error('上级资金不足，请提醒补充', null, -4);
+                }else{
+                    //判断走货上级是否有充值的货款，如果有优先走充值的货款
+                    if($superior_user['recharge_goods_money'] < $superior_goods_payment){
+                        db('user')->where('id='.$superior_user['id'])->setDec('recharge_goods_money', $superior_user['recharge_goods_money']);
+                        $data['recharge_goods_money'] = $superior_user['recharge_goods_money'];
+                    }else{
+                        db('user')->where('id='.$superior_user['id'])->setDec('recharge_goods_money', $superior_goods_payment);
+                        $data['recharge_goods_money'] = $superior_goods_payment;
+                    }
+                    db('user')->where('id='.$data['superior_id'])->setDec('goods_payment', $superior_goods_payment);
+                    db('user')->where('id='.$data['superior_id'])->setInc('lock_goods_money', $superior_goods_payment);
+                    /*添加流水记录*/
+                    $Common->ins_money_log($data['superior_id'], 2, 2, $superior_goods_payment, '货款', '欲扣除代理【'.$data['name'].'】注册货款');
                 }
-                $message['user_id'] = $data['superior_id'];
-                $message['message_category'] = 1;
-                $message['message_title'] = '代理招募';
-                $message['message_content'] = '代理【'.$data['name'].'】正在发起【'.$level['name'].'】的注册申请！';
-                $message['status'] = 1;
-                $message['is_read'] = 0;
-                $message['createtime'] = time();
-                db('message')->insert($message);
-                /*添加流水记录*/
-                $money_log_1['user_id'] = $data['superior_id'];
-                $money_log_1['money_type'] = 2;
-                $money_log_1['type'] = 2;
-                $money_log_1['money'] = $p_goods_payment;
-                $money_log_1['memo'] = '货款';
-                $money_log_1['createtime'] = time();
-                $money_log[] = $money_log_1;
-                db('user_money_log')->insertAll($money_log);
-                if($p_user['goods_payment'] - $p_user['recharge_goods_money'] < $p_goods_payment){
-                    $recharge_goods_money = $p_goods_payment - ($p_user['goods_payment'] - $p_user['recharge_goods_money']);
-                    db('user')->where('id='.$p_user['id'])->setDec('recharge_goods_money', $recharge_goods_money);
-                }
-                db('user')->where('id='.$data['superior_id'])->setDec('goods_payment', $level['goods_payment']);
-                db('user')->where('id='.$data['superior_id'])->setInc('lock_goods_money', $level['goods_payment']);
             }
+            //给推荐人发送的代理申请消息
+            $message_template = db('message_template')->where('id=2')->find();
+            $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
+            $content2 = str_replace('level_name', $level['name'], $content1);
+            $Common->ins_message($data['inviter_id'], $message_template['message_title'], $content2);
         }
         
         $data['createtime'] = time();
         $res = db('agent_apply')->insert($data);
         if($res) {
+            Db::commit();
             $this->success('提交成功');
         }else{
+            Db::rollback();
             $this->success('创建数据是败', $res, -2);
         }
 
         
+    }
+
+
+    /**
+     * 用户升级申请
+     *
+     * @param string $user_id 用户id
+     * @param string $pre_level 之前代理等级
+     * @param string $level 升级代理等级
+     * @param string $pay_type 打款方式:1=支付宝,2=银行转账
+     * @param string $money 付款金额
+     * @param string $bank_account 银行卡号/支付宝账号
+     * @param string $pay_time 付款日期
+     * @param string $remark 备注
+     * @param string $pay_certificate_images 打款凭证
+     */
+    public function user_upgrade()
+    {
+        $data['user_id'] = $this->request->request('user_id');
+        $data['pre_level'] = $this->request->request('pre_level');
+        $data['level'] = $this->request->request('level');
+        $data['pay_type'] = $this->request->request('pay_type');
+        $data['money'] = $this->request->request('money');
+        $data['bank_account'] = $this->request->request('bank_account');
+        $data['pay_time'] = $this->request->request('pay_time');
+        $data['remark'] = $this->request->request('remark');
+        $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
+        foreach ($data as $key => $value) {
+            if(!$value) {
+                if($key == 'remark') continue;
+                $this->error(__('无效的参数 : '.$key), null, -1);
+            }
+        }
+        $agent_upgrade = db('agent_upgrade')->where('status="0" and user_id='.$data['user_id'])->find();
+        if(!empty($agent_upgrade)) {
+            $this->error(__('暂时无法提交，有未审核申请'), null, -3);
+        }
+
+        $level = db('level')->where('id='.$data['level'])->find();
+        $data['goods_payment'] = 0;
+        /*--当上级ID存在时判断上级货款是否充足--*/
+        $user = db('user')->where('id='.$data['user_id'])->find();
+        // 原上级ID
+        $data['superior_id'] = $user['superior_id'];
+        // 新上级ID
+        $data['new_superior_id'] = 0;
+        // 当原上级ID存在时
+        Db::startTrans();
+        if($data['superior_id'] > 0){
+            $Common = new Common;
+            // 如果用户要升级的等级不是一级，判断原上级代理等级是否高于用户要升级的等级，如果相等或高于，那么用户的新走火上级为原上级的上级;如果是一级那么走货方为平台，不进行任何操作
+            if($data['level'] != 1) {
+                $p_user = db('user')->where('id='.$data['superior_id'])->find();
+                // 判断原上级代理等级是否高于等于用户要升级的等级
+                if($p_user['level_id'] >= $data['level']){
+                    // 如果成立，去查原上级的上级ID
+                    $data['new_superior_id'] = $this->get_parent_user($data['superior_id'], $data['level']);
+                }else{
+                    // 如果不高于等于用户要升级的等级，则新上级ID=原上级ID
+                    $data['new_superior_id'] = $user['superior_id'];
+                }
+                // 如果新上级ID大于0，证明不是平台，欲扣除其货款
+                if($data['new_superior_id'] > 0){
+                    $new_p_user = db('user')->where('id='.$data['new_superior_id'])->find();
+                    $new_p_level = db('level')->where('id='.$new_p_user['level_id'])->find();
+                    // 计算新上级成本价
+                    $new_p_goods_payment = ($level['goods_payment'] / $level['discount']) * $new_p_level['discount'];
+                    $data['goods_payment'] = $new_p_goods_payment;
+                    // 判断新上级货款是否充足
+                    if($new_p_user['goods_payment'] < $new_p_goods_payment){
+                        if($data['superior_id'] != $data['new_superior_id']){
+                            // 变更走货上级时
+                            // 站内信通知：1.新上级的通知
+                            $message_template = db('message_template')->where('id=6')->find();
+                            $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                            $content2 = str_replace('level_name', $level['name'], $content1);
+                            $Common->ins_message($data['new_superior_id'], $message_template['message_title'], $content2);
+                            // 站内信通知：1.原上级的通知
+                            $message_template = db('message_template')->where('id=9')->find();
+                            $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                            $content2 = str_replace('level_name', $level['name'], $content1);
+                            $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                        }else{
+                            // 不变更走货上级时
+                            // 站内信通知：1.原上级的通知
+                            $message_template = db('message_template')->where('id=7')->find();
+                            $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                            $content2 = str_replace('level_name', $level['name'], $content1);
+                            $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                        }
+                        $this->error('上级资金不足，请提醒补充', null, -4);
+                    }else{
+                        // 如果充足，欲扣新上级货款
+                        if($new_p_user['recharge_goods_money'] < $new_p_goods_payment){
+                            db('user')->where('id='.$new_p_user['id'])->setDec('recharge_goods_money', $new_p_user['recharge_goods_money']);
+                            $data['recharge_goods_money'] = $new_p_user['recharge_goods_money'];
+                        }else{
+                            db('user')->where('id='.$new_p_user['id'])->setDec('recharge_goods_money', $new_p_goods_payment);
+                            $data['recharge_goods_money'] = $new_p_goods_payment;
+                        }
+
+                        db('user')->where('id='.$new_p_user['id'])->setDec('goods_payment', $new_p_goods_payment);
+                        db('user')->where('id='.$new_p_user['id'])->setInc('lock_goods_money', $new_p_goods_payment);
+
+                        // 站内信通知：1.新上级的通知
+                        $message_template = db('message_template')->where('id=8')->find();
+                        $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                        $content2 = str_replace('level_name', $level['name'], $content1);
+                        $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                        // 流水记录
+                        $Common->ins_money_log($new_p_user['id'], 2, 2, $new_p_goods_payment, '货款', '下级代理升级欲扣货款');
+
+                        // 如果新上级和原上级ID不同，给原上级发送站内信通知
+                        if($data['superior_id'] != $data['new_superior_id']){
+                            // 站内信通知：1.原上级的通知
+                            $message_template = db('message_template')->where('id=9')->find();
+                            $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                            $content2 = str_replace('level_name', $level['name'], $content1);
+                            $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                        }
+                    }
+                }else{
+                    // 如果新上级ID是0，那么走货上级为平台，给原上级发送代理变更通知
+                    // 站内信通知：1.原上级的通知
+                    $message_template = db('message_template')->where('id=9')->find();
+                    $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                    $content2 = str_replace('level_name', $level['name'], $content1);
+                    $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                }
+            }else{
+                // 如果升级用户将要升级为一级，给原上级通知
+                // 站内信通知：1.原上级的通知
+                $message_template = db('message_template')->where('id=9')->find();
+                $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                $content2 = str_replace('level_name', $level['name'], $content1);
+                $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+            }
+        }
+        if($user['inviter_id'] > 0){
+            if($user['inviter_id'] != $data['superior_id'] && $user['inviter_id'] != $data['new_superior_id']){
+                // 站内信通知：1.推荐人的通知
+                $message_template = db('message_template')->where('id=10')->find();
+                $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                $content2 = str_replace('level_name', $level['name'], $content1);
+                $Common->ins_message($user['inviter_id'], $message_template['message_title'], $content2);
+            }
+        }
+        // 站内信：给升级用户
+        $message_template = db('message_template')->where('id=18')->find();
+        $content1 = str_replace('level_name', $level['name'], $message_template['message_content']);
+        $Common->ins_message($data['user_id'], $message_template['message_title'], $content1);
+
+        $data['createtime'] = time();
+        $res = db('agent_upgrade')->insert($data);
+        if($res) {
+            Db::commit();
+            $this->success('提交成功');
+        }else{
+            Db::rollback();
+            $this->success('创建数据是败', $res, -2);
+        }
+
     }
 
     /**
@@ -362,111 +539,6 @@ class User extends Api
         }
     }
 
-    /**
-     * 用户升级申请
-     *
-     * @param string $user_id 用户id
-     * @param string $pre_level 之前代理等级
-     * @param string $level 升级代理等级
-     * @param string $pay_type 打款方式:1=支付宝,2=银行转账
-     * @param string $money 付款金额
-     * @param string $bank_account 银行卡号/支付宝账号
-     * @param string $pay_time 付款日期
-     * @param string $remark 备注
-     * @param string $pay_certificate_images 打款凭证
-     */
-    public function user_upgrade()
-    {
-        $data['user_id'] = $this->request->request('user_id');
-        $data['pre_level'] = $this->request->request('pre_level');
-        $data['level'] = $this->request->request('level');
-        $data['pay_type'] = $this->request->request('pay_type');
-        $data['money'] = $this->request->request('money');
-        $data['bank_account'] = $this->request->request('bank_account');
-        $data['pay_time'] = $this->request->request('pay_time');
-        $data['remark'] = $this->request->request('remark');
-        $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
-        foreach ($data as $key => $value) {
-            if(!$value) {
-                if($key == 'remark') continue;
-                $this->error(__('无效的参数 : '.$key), null, -1);
-            }
-        }
-        $agent_upgrade = db('agent_upgrade')->where('status="0" and user_id='.$data['user_id'])->find();
-        if(!empty($agent_upgrade)) {
-            $this->error(__('暂时无法提交，有未审核申请'), null, -3);
-        }
-
-        $level = db('level')->where('id='.$data['level'])->find();
-        $data['goods_payment'] = $level['goods_payment'];
-        /*--当上级ID存在时判断上级货款是否充足--*/
-        $user = db('user')->where('id='.$data['user_id'])->find();
-        // 当上级ID
-        if($user['superior_id'] > 0){
-            $data['superior_id'] = $user['superior_id'];
-            if($data['level'] != 1) {
-                $data['new_superior_id'] = $user['superior_id'];
-
-                //判断当前代理等级是否大于上级用户代理等级 如果大于将上级id变为原上级的上级id 并扣除其货款
-                // 先判断上级的上级是否是0 如果不是再递归判断上级的上级的等级是否没有当前用户要升级的等级高或为0
-                // 注册也是要判断
-                $p_user_id = $this->get_parent_user($user['id'], $data['level']);
-                if($p_user_id != 0){
-                    $p_user = db('user')->where('id='.$p_user_id)->find();
-                    $data['new_superior_id'] = $p_user_id;
-
-                    //计算上级成本价
-                    $p_level = db('level')->where('id='.$p_user['level_id'])->find();
-                    $p_goods_payment = ($level['goods_payment'] / $level['discount']) * $p_level['discount'];
-
-                    $data['goods_payment'] = $p_goods_payment;
-                    if($p_user['goods_payment'] < $p_goods_payment){
-                        if($user['superior_id'] != $p_user_id){
-                            $message_content = '下级代理申请升级为【'.$level['name'].'】，上级变更。您的货款资金不足，代理【'.$user['nickname'].'】无法升级，请及时补充！';
-                        }else{
-                            $message_content = '下级代理申请升级为【'.$level['name'].'】，您的货款资金不足，代理【'.$user['nickname'].'】无法升级，请及时补充！';
-                        }
-                        $message['user_id'] = $p_user['id'];
-                        $message['message_category'] = 1;
-                        $message['message_title'] = '代理升级';
-                        $message['message_content'] = $message_content;
-                        $message['status'] = 1;
-                        $message['is_read'] = 0;
-                        $message['createtime'] = time();
-                        db('message')->insert($message);
-                        $this->error('上级资金不足，请提醒补充', null, -4);
-                    }else{
-                        $message['user_id'] = $data['superior_id'];
-                        $message['message_category'] = 1;
-                        $message['message_title'] = '代理升级';
-                        $message['message_content'] = '代理【'.$user['nickname'].'】正在发起【'.$level['name'].'】的升级申请！';
-                        $message['status'] = 1;
-                        $message['is_read'] = 0;
-                        $message['createtime'] = time();
-                        db('message')->insert($message);
-                        if($p_user['goods_payment'] - $p_user['recharge_goods_money'] < $p_goods_payment){
-                            $recharge_goods_money = $p_goods_payment - ($p_user['goods_payment'] - $p_user['recharge_goods_money']);
-                            db('user')->where('id='.$p_user['id'])->setDec('recharge_goods_money', $recharge_goods_money);
-                        }
-                        db('user')->where('id='.$p_user['id'])->setDec('goods_payment', $p_goods_payment);
-                        db('user')->where('id='.$p_user['id'])->setInc('lock_goods_money', $p_goods_payment);
-                    }
-                    
-                }
-                
-            }else{
-                $data['superior_id'] = 0;
-            }
-        }
-        $data['createtime'] = time();
-        $res = db('agent_upgrade')->insert($data);
-        if($res) {
-            $this->success('提交成功');
-        }else{
-            $this->success('创建数据是败', $res, -2);
-        }
-
-    }
     public function get_parent_user($id, $level)
     {
         $user = db('user')->where('id='.$id)->find();
@@ -508,6 +580,9 @@ class User extends Api
             if($level_info[$key]['id'] >= $level) {
                 unset($level_info[$key]);
             }
+        }
+        foreach ($level_info as $key => $value) {
+            $level_info[$key]['total_money'] = $level_info[$key]['total_money'] - $now_level_info['margin'];
         }
         
         $data['now_level_info'] = $now_level_info;
@@ -575,6 +650,15 @@ class User extends Api
             }
         }
         $data['createtime'] = time();
+
+        $message['user_id'] = $data['user_id'];
+        $message['message_category'] = 1;
+        $message['message_title'] = '代理充值';
+        $message['message_content'] = '充值成功，等待审核';
+        $message['status'] = 1;
+        $message['is_read'] = 0;
+        $message['createtime'] = time();
+        db('message')->insert($message);
         $res = db('user_recharge')->insert($data);
         if($res) {
             $this->success('提交成功,请等待审核');
@@ -726,11 +810,11 @@ class User extends Api
         $where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
         //1）招代理算业绩（招顶级不算，顶级下单算业绩）
         $team_money += db("agent_apply")
-        ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
+        ->where($where.' and status="1" and agency_id!=1 and superior_id='.$user_id)
         ->sum('pay_money');
         //下级升级代理算业绩
         $team_money += db("agent_upgrade")
-        ->where($where.' and status=1 and level!=1 and superior_id='.$user_id)
+        ->where($where.' and status="1" and level!=1 and superior_id='.$user_id)
         ->sum('money');
         //2）自己一条线的订单算业绩（自己的订单算业绩）
         $team_money += $this->get_team_money($user_id);
@@ -745,9 +829,9 @@ class User extends Api
             }
         }
         $money_log = db('user_money_log')
-        ->field('type,money,memo,createtime')
+        ->field('type,money,memo,desc,createtime')
         ->where('user_id='.$user_id.' and money_type='.$money_type)
-        ->order('createtime','desc')
+        ->order(['createtime'=>'desc','id'=>'desc'])
         ->limit($start,$count)
         ->select();
 
@@ -826,19 +910,34 @@ class User extends Api
         }else if($type == 2){
             $agency_data = $agency_2;
         }
+        $data['agency_data'] = array();
 
         $Order = new Order;
-        foreach ($agency_data as $key => $value) {
-            // $agency_data[$key]['team_money'] = $this->get_team_money($agency_data[$key]['user_id']);
-            $agency_data[$key]['team_money'] = $Order->get_order_header($agency_data[$key]['user_id'], $date)['total_sales'];
+        $data['header'] = $Order->get_order_header($user_id, $date);
+        if(!empty($agency_data)){
+            
+            foreach ($agency_data as $key => $value) {
+                // $agency_data[$key]['team_money'] = $this->get_team_money($agency_data[$key]['user_id']);
+                $agency_data[$key]['team_money'] = $Order->get_order_header($agency_data[$key]['user_id'], $date)['total_sales'];
+            }
+            
+            if($type == 1){
+                array_multisort(array_column($agency_data,'team_money'),SORT_DESC,$agency_data);
+                $agency = db('user a')
+                ->join('level b','a.level_id=b.id')
+                ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name,a.goods_payment')
+                ->where('a.id='.$user_id)
+                ->find();
+                $agency['team_money'] = $this->get_team_money($user_id);
+                $data['agency_data'][] = $agency;
+                foreach ($agency_data as $key => $value) {
+                    $data['agency_data'][] = $agency_data[$key];
+                }
+            }else{
+                $data['agency_data'] = $agency_data;
+            }
         }
-        $data['header'] = $Order->get_order_header($user_id, $date)['total_sales'];
-        array_multisort(array_column($agency_data,'team_money'),SORT_DESC,$agency_data);
-
-        $data['agency_data'][] = $this->get_team_money($user_id);
-        foreach ($agency_data as $key => $value) {
-            $data['agency_data'][] = $agency_data[$key];
-        }
+        
 
         $this->success('请求成功', $data);
     }
@@ -878,7 +977,7 @@ class User extends Api
         // if($user['level_id'] == 1){
         //1）招代理算业绩（招顶级不算，顶级下单算业绩）
         $data['team_money'] += db("agent_apply")
-        ->where($where.' and status=1 and agency_id!=1 and superior_id='.$user_id)
+        ->where($where.' and status="1" and agency_id!=1 and superior_id='.$user_id)
         ->sum('pay_money');
         //2）自己一条线的订单算业绩（自己的订单算业绩）
         $data['team_money'] += $this->get_team_money($user_id,' and '.$where);
@@ -936,6 +1035,7 @@ class User extends Api
                 }
             }
         }
+        //他自己的业绩
         $team_money += db('order')->where('gm_type=2 and user_id='.$user_id.' and status="3" '.$where)->sum('gm_money');
         
         return $team_money;

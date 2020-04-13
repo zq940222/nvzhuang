@@ -7,7 +7,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 extend: {
                     index_url: 'user/agentapply/index' + location.search,
                     add_url: 'user/agentapply/add',
-                    edit_url: 'user/agentapply/edit',
+                    // edit_url: 'user/agentapply/edit',
+                    edit_url: '',
                     del_url: 'user/agentapply/del',
                     multi_url: 'user/agentapply/multi',
                     table: 'agent_apply',
@@ -25,11 +26,12 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                     [
                         {checkbox: true},
                         {field: 'id', title: __('Id')},
+                        {field: 'inviter_id', title: '推荐人ID'},
                         {field: 'superior_id', title: __('Superior_id')},
                         {field: 'agency_id', title: __('Agency_id')},
                         {field: 'name', title: __('Name')},
                         {field: 'mobile', title: __('Mobile')},
-                        {field: 'password', title: __('Password')},
+                        {field: 'password', title: __('Password'),operate:false},
                         {field: 'wx', title: __('Wx')},
                         {field: 'id_card', title: __('Id_card')},
                         {field: 'pay_type', title: __('Pay_type'), searchList: {"1":__('Pay_type 1'),"2":__('Pay_type 2')}, formatter: Table.api.formatter.normal},
@@ -48,6 +50,15 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                                     classname: 'btn btn-xs btn-primary btn-dialog',
                                     icon: 'fa fa-list',
                                     url: 'user/agentapply/audit',
+                                    visible: function (row) {
+                                        //返回true时按钮显示,返回false隐藏
+                                        if (row.status == 0)
+                                        {
+                                            return true;
+                                        }else {
+                                            return false;
+                                        }
+                                    },
                                     callback: function (data) {
                                         Layer.alert("接收到回传数据：" + JSON.stringify(data), {title: "回传数据"});
                                     }

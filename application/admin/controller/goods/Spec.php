@@ -161,18 +161,18 @@ class Spec extends Backend
                     $result = $row->allowField(true)->save($params);
                     $items = $params['item'];
                     $items = explode("\n",$items);
-                    $specItems = model("SpecItem")->where('spec_id',$ids)->column('name');
+                    $specItems = model("SpecItem")->where('spec_id',$ids)->column('item');
                     $specItemAdd = array_diff($items,$specItems);
                     $specItmeDelete = array_diff($specItems,$items);
                     $specItem = [];
                     foreach ($specItemAdd as $v) {
                         $specItem[] = [
                             'spec_id' => $ids,
-                            'name' => $v
+                            'item' => $v
                         ];
                     }
                     $result2 = model('SpecItem')->saveAll($specItem);
-                    $result3 = model('SpecItem')->where('spec_id',$ids)->where('name','in',$specItmeDelete)->delete();
+                    $result3 = model('SpecItem')->where('spec_id',$ids)->where('item','in',$specItmeDelete)->delete();
 
                     if ($result !== false && $result2 !== false && $result3 !== false)
                     {

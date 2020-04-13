@@ -66,9 +66,12 @@ class Agentapply extends Backend
                             $result = false;
                         }
                     }elseif ($params['status'] == -1){
-                        if ($row['superior_id'] > 0) {
-                            Db::name('user')->where('id','=', $row['superior_id'])->setInc('goods_payment', $row['goods_payment']);
-                            Db::name('user')->where('id','=', $row['superior_id'])->setDec('lock_goods_money', $row['goods_payment']);
+                        $model = new \app\api\model\User();
+                        $res = $model->register_error($ids);
+                        if($res['code'] == 1){
+                            $result = true;
+                        }else{
+                            $result = false;
                         }
                     }
                     Db::commit();
