@@ -134,7 +134,7 @@ class Cart extends Api
         $user_id = $this->request->request('user_id');
         $num = $this->request->request('num');
 
-        if(empty($cart_ids) || empty($user_id) || empty($num)){
+        if(empty($cart_id) || empty($user_id) || empty($num)){
             $this->error('参数不能为空', null, -1);
         }
         $cart = db('cart')->where('user_id='.$user_id.' and cart_id='.$cart_id)->find();
@@ -145,11 +145,7 @@ class Cart extends Api
         ->where('cart_id='.$cart_id)
         ->setField('num',$num);
 
-        if($res){
-            $this->success('操作成功');
-        }else{
-            $this->error('操作失败');
-        }
+        $this->success('操作成功');
     }
 
 

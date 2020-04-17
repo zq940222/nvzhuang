@@ -347,10 +347,14 @@ class Order extends Api
             if($user['superior_id'] != $user['inviter_id']) {
                 //当上级不是平台时
                 if($user['superior_id'] > 0) {
-                    $p_user_level = db('user')->where('id='.$user['superior_id'])->value('level_id');
-                    $rebate = db('level')->where('id='.$p_user_level)->value('rebate');
-                    //推荐人拿到的返利
-                    $back_money = $spec_goods_price['price'.$user['level_id']] / $level['rebate'] * $rebate;
+                    $inviter_user = db('user')->where('id='.$user['superior_id'])->find();
+                    if($user['level_id'] == $inviter_user){
+                        $p_user_level = $inviter_user['level_id'];
+                        $rebate = db('level')->where('id='.$p_user_level)->value('rebate');
+                        //推荐人拿到的返利
+                        $back_money = $spec_goods_price['price'.$user['level_id']] / $level['rebate'] * $rebate;
+                    }
+                    
                     //上级拿到的利润
                     $profit = $spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level] - $back_money;
                     
@@ -627,98 +631,159 @@ class Order extends Api
         $total_sales += db("agent_apply")
         ->where($where.' and status="1" and agency_id!=1 and superior_id='.$user_id)
         ->sum('goods_payment');
-        //下级升级代理算业绩
+        // dump('邀请:'.$total_sales);
+        //2）下级升级代理算业绩
         $total_sales += db("agent_upgrade")
-        ->where($where.' and status="1" and level!=1 and superior_id='.$user_id)
+        ->where($where.' and status="1" and level!=1 and new_superior_id='.$user_id)
         ->sum('goods_payment');
-        //2）自己一条线的订单算业绩（自己的订单算业绩）
-        $User = new User;
-        $total_sales += $User->get_team_money($user_id,' and '.$where);
-        
+        // dump('升级:'.$total_sales);
+        //3）自己的订单算业绩（自己的订单算业绩）
+        $total_sales += db('order')->where($where.' and gm_type=2 and user_id='.$user_id.' and status="3"')->sum('gm_money');
+        // dump('订单:'.$total_sales);
         $user = db('user')->where('id='.$user_id)->find();
+        //4）非一级直属代理线销售额总和
+        $get_team_money = $this->get_team_money($user_id, ' and '.$where);
+        $total_sales += $get_team_money['team_money'];
+        // dump('非一级直属代理的销售额总和:'.$total_sales);
         if($user['level_id'] == 1){
-            $back_money = db('back_money')->order('id','desc')->select();
-            //查询所有该用户邀请过来的一级代理
-            $inviter_user = db('user')->where('status="1" and level_id=1 and inviter_id='.$user_id)->column('id');
-            // 如果是空的，证明没有其他的一级分销商们，直接算其总销售额和销售折扣
-            if(empty($inviter_user)){
-                //计算销售折扣
-                if($total_sales > 0){
-                    $new_team_money = $total_sales / 10000;
-                    foreach ($back_money as $key => $value) {
-                        if($new_team_money > $back_money[$key]['sales']) {
-                            $team_money = $total_sales * $back_money[$key]['discount'];
-                        }
+            $back_money = db('back_money')->order('id','asc')->select();
+            $get_team1_money = $this->get_team1_money($user_id, ' and '.$where);
+            
+            $total_sales += $get_team1_money['team_money'];
+            // 计算当前总销售折扣
+            if($total_sales > 0){
+                $new_team_money = $total_sales / 10000;
+                foreach ($back_money as $key => $value) {
+                    if($new_team_money >= $back_money[$key]['sales']) {
+                        $team_money = $total_sales * $back_money[$key]['discount'];
                     }
                 }
-            }else{
-                //如果当前用户有团队（团队老大）
-                // 得到当前第一直属一级分销商们的总销售额和销售折扣
-                $total_child_sales = array();
-                foreach ($inviter_user as $key => $value) {
-                    $new_team_money = 0;
-                    $total_child_sales[$key]['team_money'] = 0;
-                    $total_child_sales[$key]['total_sales'] = $this->get_level1_total_sales($value, $where);
-                    if($total_child_sales[$key]['total_sales'] > 0){
-                        $new_team_money = $total_child_sales[$key]['total_sales'] / 10000;
+            }
+            $user_data = $get_team1_money['user_data'];
+            if(!empty($user_data)){
+                foreach ($user_data as $key => $value) {
+                    if($user_data[$key]['team_money'] > 0){
+                        $new_team_money = $user_data[$key]['team_money'] / 10000;
                         foreach ($back_money as $k => $v) {
-                            if($new_team_money > $back_money[$k]['sales']) {
-                                $total_child_sales[$key]['team_money'] = $total_child_sales[$key]['total_sales'] * $back_money[$k]['discount'];
+                            if($new_team_money >= $back_money[$k]['sales']) {
+                                $user_team_money = $user_data[$key]['team_money'] * $back_money[$k]['discount'];
                             }
                         }
-                    }
-                    $total_sales += $total_child_sales[$key]['total_sales'];
-                }
-                
-                if($total_sales > 0){
-                    $new_team_money = 0;
-                    $new_team_money = $total_sales / 10000;
-                    foreach ($back_money as $key => $value) {
-                        if($new_team_money > $back_money[$key]['sales']) {
-                            $team_money = $total_sales * $back_money[$key]['discount'];
+                        if(isset($user_team_money)) {
+                            $team_money -= $user_team_money;
                         }
                     }
                 }
-                if($team_money > 0){
-                    foreach ($total_child_sales as $key => $value) {
-                        $team_money -= $total_child_sales[$key]['team_money'];
-                    }
-                }
-                
             }
+            
         }
+        // dump('计算团队后:'.$total_sales);
         //总销售额
         $money_info['total_sales'] = $total_sales;
         $money_info['team_money'] = $team_money;
         return $money_info;
     }
-
-    //  $user_id 当前顶级用户的一级分销商
-    public function get_level1_total_sales($user_id, $where)
+    // 非一级直属代理线销售额总和
+    public function get_team_money($user_id, $where = '')
     {
-        // 当前顶级用户的一级分销商们
-        $inviter_user = db('user')->where('status="1" and level_id=1 and inviter_id='.$user_id)->column('id');
-        $total_sales = 0;//总销售额
-        if(!empty($inviter_user)){
-            //如果存在继续查其一级分销商们
-            foreach ($inviter_user as $key => $value) {
-                $return_data = $this->get_level1_total_sales($value, $where);
-                $total_sales += $return_data['total_sales'];
+        $team_money = 0;
+        //先查自己有没有直属下级
+        $users = db('user')
+        ->field('id,real_name,level_id')
+        ->where('status="1" and superior_id='.$user_id)
+        ->select();
+        if(!empty($users)){
+            foreach ($users as $key => $value) {
+                $users[$key]['team_money'] = 0;
+                //1）招代理算业绩（招顶级不算，顶级下单算业绩）
+                $users[$key]['team_money'] += db("agent_apply")
+                ->where('status="1" and agency_id!=1 and superior_id='.$users[$key]['id'].$where)
+                ->sum('goods_payment');
+                //2）下级升级代理算业绩
+                $users[$key]['team_money'] += db("agent_upgrade")
+                ->where('status="1" and level!=1 and new_superior_id='.$users[$key]['id'].$where)
+                ->sum('goods_payment');
+                //3）自己的订单算业绩（自己的订单算业绩）
+                $users[$key]['team_money'] += db('order')->where('gm_type=2 and user_id='.$users[$key]['id'].' and status="3"'.$where)->sum('gm_money');
+
+                $team_money += $users[$key]['team_money'];
+
+                $child_users = db('user')->where('superior_id='.$users[$key]['id'])->select();
+                if(!empty($child_users)) {
+                    $child_data = $this->get_team_money($users[$key]['id'],$where);
+                    $team_money += $child_data['team_money'];
+                    $child_users_data = $child_data['user_data'];
+                    if(!empty($child_users_data)){
+                        foreach ($child_users_data as $k => $v) {
+                            $users[$key]['team_money'] += $child_users_data[$k]['team_money'];
+                        }
+                    }
+                }
             }
-        }else{
-            //1）招代理算业绩（招顶级不算，顶级下单算业绩）
-            $total_sales += db("agent_apply")
-            ->where($where.' and status="1" and agency_id!=1 and superior_id='.$user_id)
-            ->sum('pay_money');
-            //下级升级代理算业绩（升顶级不算）
-            $total_sales += db("agent_upgrade")
-            ->where($where.' and status="1" and level!=1 and superior_id='.$user_id)
-            ->sum('money');
-            //2）自己一条线的订单算业绩（自己的订单算业绩）
-            $total_sales += $User->get_team_money($user_id,' and '.$where);
         }
-        return $total_sales;
+        $data['team_money'] = $team_money;
+        $data['user_data'] = $users;
+        return $data;
     }
+    // 一级直属代理团队销售额总和
+    public function get_team1_money($user_id, $where = '')
+    {
+        $team_money = 0;
+        $users = [];
+        //先查自己有没有直属下级
+        $level_tree = db('level_tree')
+        ->field('user_id,level_id,level_1')
+        ->where('user_id='.$user_id)
+        ->find();
+        if(!empty($level_tree['level_1'])){
+            $level1_users = explode(',', $level_tree['level_1']);
+            
+            foreach ($level1_users as $key => $value) {
+                $users[$key]['id'] = $value;
+            }
+            // dump($users);
+            foreach ($users as $key => $value) {
+                $users[$key]['team_money'] = 0;
+                //1）招代理算业绩（招顶级不算，顶级下单算业绩）
+                $users[$key]['team_money'] += db("agent_apply")
+                ->where('status="1" and agency_id!=1 and superior_id='.$users[$key]['id'].$where)
+                ->sum('goods_payment');
+                //2）下级升级代理算业绩
+                $users[$key]['team_money'] += db("agent_upgrade")
+                ->where('status="1" and level!=1 and new_superior_id='.$users[$key]['id'].$where)
+                ->sum('goods_payment');
+                //3）自己的订单算业绩（自己的订单算业绩）
+                $users[$key]['team_money'] += db('order')->where('gm_type=2 and user_id='.$users[$key]['id'].' and status="3"'.$where)->sum('gm_money');
+                //4）自己的非一级的直属下级业绩
+                $users[$key]['team_money'] += $this->get_team_money($users[$key]['id'],$where)['team_money'];
+
+                $team_money += $users[$key]['team_money'];
+                $child_level_tree = db('level_tree')
+                ->field('user_id,level_id,level_1')
+                ->where('user_id='.$users[$key]['id'])
+                ->find();
+                if(!empty($child_level_tree['level_1'])){
+                    $child_level1_users = explode(',', $child_level_tree['level_1']);
+                    $child_users = [];
+                    foreach ($child_level1_users as $ck => $value) {
+                        $child_users[$ck]['id'] = $value;
+                    }
+                    $child_data = $this->get_team1_money($users[$key]['id'],$where);
+                    $team_money += $child_data['team_money'];
+                    $child_users_data = $child_data['user_data'];
+                    if(!empty($child_users_data)){
+                        foreach ($child_users_data as $k => $v) {
+                            $users[$key]['team_money'] += $child_users_data[$k]['team_money'];
+                        }
+                    }
+                }
+            }
+        }
+        $data['team_money'] = $team_money;
+        $data['user_data'] = $users;
+        return $data;
+    }
+
 
     /**
      * 订单详情

@@ -130,7 +130,7 @@ class Goods extends Api
             }
             $goods['goods_images'] = $goods_images;
         }
-
+        $goods['goods_content'] = str_replace('/uploads/', 'http://scdaili.com/uploads/', $goods['goods_content']);
         $spec_field = 'id as group_id,goods_id,key,key_name,price,tag_price,price'.$level.' as lprice,store_count,spec_image';
 
         $spec_goods_price = db('spec_goods_price')

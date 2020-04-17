@@ -33,9 +33,16 @@ class User extends Api
         ->find();
         $user['level_name'] = db('level')->where('id='.$user['level_id'])->value('nickname');
         if($user['superior_id'] > 0){
-            $user['superior_mobile'] = db('user')->where('id='.$user['superior_id'])->value('mobile');
+            $superior = db('user')->where('id='.$user['superior_id'])->find();
+            $user['superior_mobile'] = $superior['mobile'];
         }else{
             $user['superior_mobile'] = '';
+        }
+        if($user['inviter_id'] > 0){
+            $inviter = db('user')->where('id='.$user['inviter_id'])->find();
+            $user['inviter_mobile'] = $inviter['mobile'];
+        }else{
+            $user['inviter_mobile'] = '';
         }
         
         if(!empty($user['avatar'])) $user['avatar'] = get_http_host($user['avatar']);
@@ -198,7 +205,7 @@ class User extends Api
                     db('user')->where('id='.$data['superior_id'])->setDec('goods_payment', $superior_goods_payment);
                     db('user')->where('id='.$data['superior_id'])->setInc('lock_goods_money', $superior_goods_payment);
                     /*添加流水记录*/
-                    $Common->ins_money_log($data['superior_id'], 2, 2, $superior_goods_payment, '货款', '欲扣除代理【'.$data['name'].'】注册货款');
+                    $Common->ins_money_log($data['superior_id'], 2, 2, $superior_goods_payment, '货款', '预扣除代理【'.$data['name'].'】注册货款');
                 }
             }
             //给推荐人发送的代理申请消息
@@ -280,7 +287,7 @@ class User extends Api
                     // 如果不高于等于用户要升级的等级，则新上级ID=原上级ID
                     $data['new_superior_id'] = $user['superior_id'];
                 }
-                // 如果新上级ID大于0，证明不是平台，欲扣除其货款
+                // 如果新上级ID大于0，证明不是平台，预扣除其货款
                 if($data['new_superior_id'] > 0){
                     $new_p_user = db('user')->where('id='.$data['new_superior_id'])->find();
                     $new_p_level = db('level')->where('id='.$new_p_user['level_id'])->find();
@@ -311,7 +318,7 @@ class User extends Api
                         }
                         $this->error('上级资金不足，请提醒补充', null, -4);
                     }else{
-                        // 如果充足，欲扣新上级货款
+                        // 如果充足，预扣新上级货款
                         if($new_p_user['recharge_goods_money'] < $new_p_goods_payment){
                             db('user')->where('id='.$new_p_user['id'])->setDec('recharge_goods_money', $new_p_user['recharge_goods_money']);
                             $data['recharge_goods_money'] = $new_p_user['recharge_goods_money'];
@@ -327,9 +334,9 @@ class User extends Api
                         $message_template = db('message_template')->where('id=8')->find();
                         $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
                         $content2 = str_replace('level_name', $level['name'], $content1);
-                        $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                        $Common->ins_message($new_p_user['id'], $message_template['message_title'], $content2);
                         // 流水记录
-                        $Common->ins_money_log($new_p_user['id'], 2, 2, $new_p_goods_payment, '货款', '下级代理升级欲扣货款');
+                        $Common->ins_money_log($new_p_user['id'], 2, 2, $new_p_goods_payment, '货款', '下级代理升级预扣货款');
 
                         // 如果新上级和原上级ID不同，给原上级发送站内信通知
                         if($data['superior_id'] != $data['new_superior_id']){
@@ -875,10 +882,10 @@ class User extends Api
 
         $where1 = 'a.status="1" and a.superior_id='.$user_id;
 
-        $where2 = 'a.status="1" and a.inviter_id='.$user_id.' and a.superior_id!='.$user_id;
+        $where2 = 'status="1" and inviter_id='.$user_id;
 
         if($level_id > 0) {
-            $where1 .= ' and level_id='.$level_id;
+            $where1 .= ' and a.level_id='.$level_id;
             $where2 .= ' and level_id='.$level_id;
         }
         
@@ -895,13 +902,52 @@ class User extends Api
         }
         $agency_1_num = count($agency_1);
 
-        $agency_2 = db('user a')
-        ->join('level b','a.level_id=b.id')
-        ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name,a.goods_payment')
-        ->where($where2)
-        ->order('a.createtime','desc')
-        ->select();
-        $agency_2_num = count($agency_2);
+        $agency_ids = '';
+        // 所有邀请的人的ID
+        $inviter_id_arr = db('user')->where($where2)->column('id');
+        if(!empty($inviter_id_arr)) {
+            if(!empty($agency_ids)) $agency_ids .= ',';
+            $agency_ids .= implode(',', $inviter_id_arr);
+            foreach ($inviter_id_arr as $key => $value) {
+                $childs_ids = $this->get_childs_id($value);
+                if(!empty($childs_ids)){
+                    if(!empty($agency_ids)) $agency_ids .= ',';
+                    $agency_ids .= $childs_ids;
+                }
+            }
+        } 
+
+        
+        //查所有下级的ID
+        $superior_id_arr = db('user')->where(str_replace('a.', '', $where1))->column('id');
+        if(!empty($superior_id_arr)){
+            if(!empty($agency_ids)) $agency_ids .= ',';
+            $agency_ids .= implode(',', $superior_id_arr);
+            foreach ($superior_id_arr as $key => $value) {
+                $childs_ids = $this->get_childs_id($value);
+                if(!empty($childs_ids)){
+                    if(!empty($agency_ids)) $agency_ids .= ',';
+                    $agency_ids .= $childs_ids;
+                }
+            }
+        }
+        // dump($agency_ids);
+        $agency_2 = array();
+        $agency_2_where = 'a.status="1" and a.id in ('.$agency_ids.')';
+        if(!empty($superior_id_arr)) {
+            $agency_2_where .= ' and a.id not in ('.implode(',', $superior_id_arr).')';
+        }
+        $agency_2_num = 0;
+        if(!empty($agency_ids)){
+            $agency_2 = db('user a')
+            ->join('level b','a.level_id=b.id')
+            ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name,a.goods_payment')
+            ->where($agency_2_where)
+            ->order('a.createtime','desc')
+            ->select();
+            $agency_2_num = count($agency_2);
+        }
+        
 
         $data['agency_1_num'] = $agency_1_num;
         $data['agency_2_num'] = $agency_2_num;
@@ -913,14 +959,15 @@ class User extends Api
         $data['agency_data'] = array();
 
         $Order = new Order;
+        // dump('当前用户:');
         $data['header'] = $Order->get_order_header($user_id, $date);
         if(!empty($agency_data)){
-            
             foreach ($agency_data as $key => $value) {
                 // $agency_data[$key]['team_money'] = $this->get_team_money($agency_data[$key]['user_id']);
+                // dump('直属下级:');
                 $agency_data[$key]['team_money'] = $Order->get_order_header($agency_data[$key]['user_id'], $date)['total_sales'];
             }
-            
+            // dump($agency_data);
             if($type == 1){
                 array_multisort(array_column($agency_data,'team_money'),SORT_DESC,$agency_data);
                 $agency = db('user a')
@@ -928,7 +975,7 @@ class User extends Api
                 ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name,a.goods_payment')
                 ->where('a.id='.$user_id)
                 ->find();
-                $agency['team_money'] = $this->get_team_money($user_id);
+                $agency['team_money'] = $Order->get_team_money($user_id)['team_money'];
                 $data['agency_data'][] = $agency;
                 foreach ($agency_data as $key => $value) {
                     $data['agency_data'][] = $agency_data[$key];
@@ -940,6 +987,23 @@ class User extends Api
         
 
         $this->success('请求成功', $data);
+    }
+
+    public function get_childs_id($user_id, $ids = '')
+    {
+        $id_arr = db('user')
+        ->where('status="1" and superior_id='.$user_id.' or inviter_id='.$user_id)
+        ->column('id');
+        if(!empty($id_arr)) {
+            if(!empty($ids)){
+                $ids .= ',';
+            }
+            $ids .= implode(',', $id_arr);
+            foreach ($id_arr as $key => $value) {
+                $ids = $this->get_childs_id($value, $ids);
+            }
+        }
+        return $ids;
     }
 
     /**
@@ -1012,7 +1076,7 @@ class User extends Api
         $data['agency_data'] = $agency_1;
 
         foreach ($data['agency_data'] as $key => $value) {
-            $data['agency_data'][$key]['team_money'] = $this->get_team_money($data['agency_data'][$key]['user_id'].' and '.$where);
+            $data['agency_data'][$key]['team_money'] = $this->get_team_money($data['agency_data'][$key]['user_id'],' and '.$where);
         }
         
 
@@ -1031,7 +1095,7 @@ class User extends Api
                 $team_money += $order_total_amount;
                 $child_users = db('user')->where('superior_id='.$users[$key]['id'])->select();
                 if(!empty($child_users)) {
-                    $team_money += $this->get_team_money($users[$key]['id'].$where);
+                    $team_money += $this->get_team_money($users[$key]['id'],$where);
                 }
             }
         }
