@@ -13,6 +13,8 @@ return [
     'Courier_company' => '快递公司',
     'Courier_no'      => '快递单号',
     'Status'          => '状态',
+    'Status -3'       => '失效',
+    'Status -2'       => '取消',
     'Status -1'       => '审核未通过',
     'Status 0'        => '等待审核',
     'Status 1'        => '寄回商品',

@@ -17,7 +17,7 @@ class Order extends Api
     //如果接口已经设置无需登录,那也就无需鉴权了
     //
     // 无需登录的接口,*表示全部
-    protected $noNeedLogin = ['get_freight','get_freight_money','get_user_address','get_order_header'];
+    protected $noNeedLogin = ['get_freight','get_freight_money','get_user_address','get_order_header','refund_order_list','parent_goods_payment'];
     // 无需鉴权的接口,*表示全部
     protected $noNeedRight = '*';
 
@@ -301,6 +301,7 @@ class Order extends Api
         $user = db('user')->where('id='.$user_id)->find();
         //计算订单总价
         Db::startTrans();
+        $Common = new Common;
         //唯一订单号
         $order_sn_unique = time().mt_rand(100000, 999999).$user_id;
         foreach ($goods_data as $key => $value) {
@@ -310,10 +311,6 @@ class Order extends Api
             $shipping_price = 0;
             //订单总价
             $total_amount = 0;
-            //给上级产生的利润 做查询记录用
-            $profit = 0;
-            //给推荐人的返利
-            $back_money = 0;
 
             $goods_id = $goods_data[$key]['goods_id'];
             $group_id = $goods_data[$key]['group_id'];
@@ -342,57 +339,45 @@ class Order extends Api
             if($goods['is_free_shipping'] == 0) {
                 $shipping_price = $this->get_freight(['goods_num'=>$num,'address_id'=>$user_address['id']]);
             }
-            /*累计利润和返利金额*/
-            //判断邀请人和上级是否一致
-            if($user['superior_id'] != $user['inviter_id']) {
-                //当上级不是平台时
-                if($user['superior_id'] > 0) {
-                    $inviter_user = db('user')->where('id='.$user['superior_id'])->find();
-                    if($user['level_id'] == $inviter_user){
-                        $p_user_level = $inviter_user['level_id'];
-                        $rebate = db('level')->where('id='.$p_user_level)->value('rebate');
-                        //推荐人拿到的返利
-                        $back_money = $spec_goods_price['price'.$user['level_id']] / $level['rebate'] * $rebate;
-                    }
-                    
-                    //上级拿到的利润
-                    $profit = $spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level] - $back_money;
-                    
-                }
-                //当上级是平台时 推荐人的返利将由平台提供
-                if($user['superior_id'] == 0) {
-                    //推荐人返利
-                    $p_user_level = db('user')->where('id='.$user['inviter_id'])->value('level_id');
-                    //查询等级返利比例
-                    $rebate = db('level')->where('id='.$p_user_level)->value('rebate');
-                    $back_money = $spec_goods_price['price'.$user['level_id']] * $rebate;
-                }
-            }else{
-                $p_user_level = db('user')->where('id='.$user['superior_id'])->value('level_id');
-                //上级拿到的利润
-                $profit = $spec_goods_price['price'.$user['level_id']] - $spec_goods_price['price'.$p_user_level];
-            }
-            /*累计利润和返利金额*/
+
             //计算订单总价格和所有订单累计价格
             $total_amount = $goods_price + $shipping_price;
             if($user['goods_payment'] - $total_amount < 0) {
                 $this->error('货款不足，请充值', null, -5);
-            } else {
-                db('user')->where('id='.$user_id)->setDec('goods_payment', $total_amount);
-                //判断用户货款剩余与充值货款剩余是否相等
-                if($user['goods_payment'] == $user['recharge_goods_money']){
-                    $goods_data[$key]['gm_money'] = $total_amount;
-                    $goods_data[$key]['gm_type'] = 2;
-                }else{
-                    if($user['goods_payment'] - $user['recharge_goods_money'] >= $total_amount){
-                        $goods_data[$key]['gm_money'] = 0;
-                        $goods_data[$key]['gm_type'] = 1;
-                    }else{
-                        $goods_data[$key]['gm_money'] = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
-                        $goods_data[$key]['gm_type'] = 2;
+            }
+
+            // 如果用户是一级,记录给直属一级上级的返利，此为平台给的不扣除用户的利润，并且不区分充值货款和入代理货款
+            if($user['level_id'] == 1){
+                $level_tree = db('level_tree')->where('level_id=1 and user_id!='.$user_id)->select();
+                $superior_superior_user = 0;
+                foreach ($level_tree as $key => $value) {
+                    if(!empty($level_tree[$key]['level_1'])){
+                        $user_level = explode(',', $level_tree[$key]['level_1']);
+                        if(in_array($user_id, $user_level)){
+                            $superior_superior_user = $level_tree[$key]['user_id'];
+                        }
                     }
                 }
+                if($superior_superior_user > 0){
+                    $rebate_1 = db('level')->where('id=1')->value('rebate'); // 0.05
+                    $superior_superior_user_money = $total_amount * $rebate_1;
+                    $user_back_money['user_id'] = $user_id;
+                    $user_back_money['old_p_user_id'] = $user['old_superior_id'];
+                    $user_back_money['money'] = $total_amount;// 用户为一级时不区分充值货款和入代理货款
+                    $user_back_money['back_money'] = $superior_superior_user_money;
+                    $user_back_money['status'] = 0; //-1=失败｜0=等待返现｜1=成功
+                    $id = db('user_back_money')->insertGetId($user_back_money);
+                }
+            }else{
+                // 查询用户是否使用了充值货款，如果使用了，递归预扣除其上级的货款，并生成记录.成功将会返回一个数组(所有记录的ID集)
+                $parent_goods_payment = $this->parent_goods_payment($user_id,$total_amount,$Common);
+                $parent_goods_payment_str = '';
+                if(!empty($parent_goods_payment)){
+                    $parent_goods_payment_str = implode(',', $parent_goods_payment);
+                    $user_back_money = db('user_back_money')->where('status=0 and id in ('.$parent_goods_payment_str.') and user_id='.$user_id)->find();
+                }
             }
+            
             //生成订单
             $order = array();
             $order['user_id'] = $user_id;
@@ -408,99 +393,58 @@ class Order extends Api
             $order['shipping_price'] = $shipping_price;
             $order['order_amount'] = $total_amount;
             $order['total_amount'] = $total_amount;
-            $order['gm_money'] = $goods_data[$key]['gm_money']; //货款消费金额
-            $order['gm_type'] = $goods_data[$key]['gm_type'];   //货款消费类型:1-注册升级货款消费｜2-充值货款消费
-            // //推荐人返利  
-            if($back_money > 0){
-                $order['back_money'] = $back_money;
-            }
-            //当上级是平台时
-            if($user['superior_id'] == 0) {
-                $order['shipment'] = '平台';  //出货方
-                $order['shipment_id'] = 0;  //出货方ID
-            }else{
-                $p_user = db('user')->where('id='.$user['superior_id'])->find();
-                /*当前消费方式为充值货款消费时*/
-                //查看上级代理货款是否充足
-                if($goods_data[$key]['gm_type'] == 2){
-                    
-                    //上级拿货价
-                    //判断邀请人和上级是否一致
-                    if($user['superior_id'] == $user['inviter_id']) {
-                        $p_user_goods_price = $goods_data[$key]['gm_money'] - $shipping_price - $profit;
-                    }else{
-                        $p_user_goods_price = $goods_data[$key]['gm_money'] - $shipping_price - $profit - $back_money;
-                    }
-                    
-                    if($p_user['goods_payment'] - $p_user_goods_price < 0) {
-                        $p_user_message['user_id'] = $p_user['id'];
-                        $p_user_message['message_category'] = 1;
-                        $p_user_message['message_title'] = '代理订货通知';
-                        $p_user_message['message_content']='您的代理'.$user['nickname'].'将要提货'.$p_user_goods_price.'元，您的货款剩余不足，请及时补货。';
-                        $p_user_message['status'] = 1;
-                        $p_user_message['is_read'] = 0;
-                        $p_user_message['createtime'] = time();
-                        db('message')->insert($p_user_message);
-                        $this->error('上级货品不足，请联系其补货', null, -7);
-                    }else{
-                        //当推荐人与上级是同一人时
-                        if($user['superior_id'] == $user['inviter_id']) {
-                            $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，货款已扣除。';
-                        }else{//当推荐人与上级不是同一人时 上级用户给推荐人返利
-                            $message_content = '您的代理'.$user['nickname'].'将要提货'.$goods_price.'元，其中'.$back_money.'元是给其推荐人的返利。货款已扣除。';
-                        }
-                        //扣除上级货款金额添加到玉扣款字段
-                        db('user')->where('id='.$user['superior_id'])->setDec('goods_payment', $p_user_goods_price);
-                        db('user')->where('id='.$user['superior_id'])->setInc('lock_goods_money', $p_user_goods_price);
-                        //消息通知
-                        $puser_message['user_id'] = $p_user['id'];
-                        $puser_message['message_category'] = 1;
-                        $puser_message['message_title'] = '代理订货通知';
-                        $puser_message['message_content'] = $message_content;
-                        $puser_message['status'] = 1;
-                        $puser_message['is_read'] = 0;
-                        $puser_message['createtime'] = time();
-                        db('message')->insert($puser_message);
-                        /*添加流水记录*/
-                        $money_log_1['user_id'] = $p_user['id'];
-                        $money_log_1['money_type'] = 2;
-                        $money_log_1['type'] = 2;
-                        $money_log_1['money'] = $p_user_goods_price;
-                        $money_log_1['memo'] = '下级订货货款';
-                        $money_log_1['createtime'] = time();
-                        $money_log[] = $money_log_1;
-                        /*添加流水记录*/
-                    }
-                    if($profit > 0) {
-                        $order['profit'] = $profit;
-                    }
-                }
-                /*当前消费方式为充值货款消费时END*/
-                $money_log_3['user_id'] = $user['id'];
-                $money_log_3['money_type'] = 2;
-                $money_log_3['type'] = 2;
-                $money_log_3['money'] = $total_amount;
-                $money_log_3['memo'] = '货款';
-                $money_log_3['createtime'] = time();
-                $money_log[] = $money_log_3;
-
-                $order['shipment'] = $p_user['nickname'];   //出货方
-                $order['shipment_id'] = $p_user['id'];      //出货方ID
-            }
-            //添加数据
-            if(!empty($money_log)) {
-                db('user_money_log')->insertAll($money_log);
-            }
             $order['goods_num'] = $num;
             $order['createtime'] = time();
+            $order['shipment'] = '平台';
+            $order['shipment_id'] = 0;
+            //判断用户货款剩余与充值货款剩余是否相等
+            if($user['goods_payment'] == $user['recharge_goods_money']){
+                $gm_money = $total_amount;
+            }else{
+                if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
+                    $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                }
+            }
+            if($gm_money > 0){
+                $order['gm_type'] = 2;
+                $order['gm_money'] = $gm_money;
+            }
+            if($user['level_id'] != 1){
+                if(!empty($user_back_money)){
+                    if(!empty($user_back_money['p_user_id'])){
+                        $order['shipment'] = db('user')->where('id='.$user_back_money['p_user_id'])->value('real_name');
+                        $order['shipment_id'] = $user_back_money['p_user_id'];
+                    }
+                    $order['gm_type'] = $user_back_money['money']>0?2:1;
+                    $order['gm_money'] = $user_back_money['money'];
+                    $order['profit'] = $user_back_money['profit'];
+                    $order['back_money'] = $user_back_money['back_money'];
+                }
+            }else{
+                if($superior_superior_user > 0){
+                    $order['back_money'] = $superior_superior_user_money;
+                }
+            }
+            
             //生成订单
             $order_id = db('order')->insertGetId($order);
+            if($user['level_id'] != 1){
+                if (!empty($parent_goods_payment_str)) {
+                    db('user_back_money')->where('id in ('.$parent_goods_payment_str.')')->setField('order_id',$order_id);
+                }
+            }else{
+                if($superior_superior_user > 0){
+                    db('user_back_money')->where('id='.$id)->setField('order_id',$order_id);
+                }
+            }
+
             //生成订单商品详情
             $order_goods = array();
             $order_goods['order_id'] = $order_id;
             $order_goods['goods_id'] = $goods_data[$key]['goods_id'];
             $order_goods['goods_name'] = $goods['name'];
             $order_goods['goods_sn'] = $goods['goods_sn'];
+            $order_goods['goods_price'] = $goods_data[$key]['price'];
             $order_goods['goods_num'] = $goods_data[$key]['num'];
             $order_goods['item_id'] = $goods_data[$key]['group_id'];
             $spec_goods_price = db('spec_goods_price')->where('id='.$goods_data[$key]['group_id'])->find();
@@ -539,6 +483,97 @@ class Order extends Api
         $this->error('下单成功', $order['order_sn'], 1);
     }
 
+    // 递归扣除一条线上每个用户的直属上级货款
+    // user_id          下单用户ID
+    // total_amount     用户使用的充值货款数量
+    // $Common          $Common 对象
+    // $array           方法返回的执行成功ID集
+    public function parent_goods_payment($user_id,$total_amount,$Common,$array = [])
+    {
+        $user = db('user')->where('id='.$user_id)->find();
+        $gm_money = 0;
+        $back_money = 0;
+
+        //判断用户货款剩余与充值货款剩余是否相等
+        if($user['goods_payment'] == $user['recharge_goods_money']){
+            $gm_money = $total_amount;
+        }else{
+            if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
+                $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+            }
+        }
+        db('user')->where('id='.$user_id)->setDec('recharge_goods_money', $gm_money);
+        db('user')->where('id='.$user_id)->setDec('goods_payment',$total_amount);
+        if(!empty($array)){
+            db('user')->where('id='.$user_id)->setInc('lock_goods_payment',$shipment_money);
+        }
+
+        // 如果用户使用充值货款
+        if($gm_money > 0){
+            // 判断用户原上级在不在
+            if($user['old_superior_id'] > 0){
+                $old_p_user_level = db('level')->where('id='.$user['old_superior_id'])->find();
+                // 原上级返利 = 下级用户使用的充值货款 * 原上级等级的返利折扣
+                $back_money = $gm_money * $old_p_user_level['rebate'];
+            }
+            if($user['superior_id'] > 0){
+                $user_level = db('level')->where('id='.$user['level_id'])->find();
+                $p_user = db('user')->where('id='.$user['superior_id'])->find();
+                $p_user_level = db('level')->where('id='.$p_user['level_id'])->find();
+                // 上级成本价 == 用户所使用的充值货款 / 用户的拿货折扣 * 上级的拿货折扣
+                $shipment_money = $gm_money / $user_level['discount'] * $p_user_level['discount'];
+                // 上级利润 = $gm_money - $shipment_money
+                $profit = $gm_money - $shipment_money - $back_money;
+                // 判断上级货款是否充足
+                if($p_user['goods_payment'] - $shipment_money < 0) {
+                    // 站内信：上级
+                    $message_template = db('message_template')->where('id=20')->find();
+                    $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                    $content2 = str_replace('money', $shipment_money, $content1);
+                    $Common->ins_message($p_user['id'], $message_template['message_title'], $content2);
+                    
+                    Db::rollback();
+                    $this->error('上级货款不足', null, -7);
+                }else{
+                    // 预扣除上级用户货款
+                    
+                    $Common->ins_money_log($p_user['id'], 2, 2, $shipment_money, '货款', '下级提货预扣货款');
+                    // 站内信：上级 您的代理【nickname】将要提货【money】元，货款已扣除。
+                    $message_template = db('message_template')->where('id=21')->find();
+                    $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                    $content2 = str_replace('money', $shipment_money, $content1);
+                    $Common->ins_message($p_user['id'], $message_template['message_title'], $content2);
+
+                    $data = array();
+                    $data['user_id'] = $user_id;    //提货用户ID
+                    $data['p_user_id'] = $p_user['id']; //上级ID
+                    $data['old_p_user_id'] = $user['old_superior_id'];  //原上级ID
+                    $data['money'] = $gm_money; //提货金额(为提货用户使用的充值货款)
+                    $data['shipment_money'] = $shipment_money;  //上级成本价
+                    $data['profit'] = $profit;  //上级利润(已扣除给原上级的返利)
+                    $data['back_money'] = $back_money;  //原上级得到的返利(如果原上级存在)
+                    $data['status'] = 0;
+                    $id = db('user_back_money')->insertGetId($data);
+                    array_push($array, $id);
+                    $this->parent_goods_payment($p_user['id'],$shipment_money,$Common,$array);
+                }
+            }else{
+                // 如果下单用户的上级没有上级，记录上级使用了多少充值货款
+                $data = array();
+                $data['user_id'] = $user_id;    //提货用户ID
+                // $data['p_user_id'] = $p_user['id']; //上级ID
+                $data['old_p_user_id'] = $user['old_superior_id'];  //原上级ID
+                $data['money'] = $gm_money; //提货金额(为提货用户使用的充值货款)
+                // $data['shipment_money'] = $shipment_money;  //上级成本价
+                // $data['profit'] = $profit;  //上级利润(已扣除给原上级的返利)
+                $data['back_money'] = $back_money;  //原上级得到的返利(如果原上级存在)
+                $data['status'] = 0;
+                $id = db('user_back_money')->insertGetId($data);
+                array_push($array, $id);
+            }
+        }
+        return $array;
+    }
     /**
      * 订单列表
      *
@@ -569,7 +604,7 @@ class Order extends Api
         $start = ($page - 1) * $count;
 
         $field = 'id as order_id,user_id,order_sn,is_refund,status,goods_num,total_amount,createtime';
-        $where = 'user_id='.$user_id;
+        $where = 'is_refund=0 and user_id='.$user_id;
         if($status > 0) $where .= ' and status='.$status;
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
@@ -589,10 +624,6 @@ class Order extends Api
             ->select();
             foreach ($order_goods as $key1 => $value1) {
                 if(!empty($order_goods[$key1]['image'])) $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
-            }
-            $order[$key]['refund_type'] = 0;
-            if($order[$key]['is_refund'] == 1){
-                $order[$key]['refund_type'] = db('refund_order')->where('order_id='.$order[$key]['order_id'])->value('refund_type');//售后类型:1=仅退款,2=退货退款
             }
             $order[$key]['goods_data'] = $order_goods;
         }
@@ -638,7 +669,7 @@ class Order extends Api
         ->sum('goods_payment');
         // dump('升级:'.$total_sales);
         //3）自己的订单算业绩（自己的订单算业绩）
-        $total_sales += db('order')->where($where.' and gm_type=2 and user_id='.$user_id.' and status="3"')->sum('gm_money');
+        $total_sales += db('order')->where($where.' and is_refund=0 and gm_type=2 and user_id='.$user_id.' and status="3"')->sum('gm_money');
         // dump('订单:'.$total_sales);
         $user = db('user')->where('id='.$user_id)->find();
         //4）非一级直属代理线销售额总和
@@ -821,47 +852,22 @@ class Order extends Api
         ->select();
         foreach ($order_goods as $key1 => $value1) {
             if(!empty($order_goods[$key1]['image'])) $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
-            $refund_order = db('refund_order')->where('order_goods_id='.$order_goods[$key1]['order_goods_id'])->find();
-            if($order['status'] < 3){
-                $order_goods[$key1]['refund_order_status'] = -2;
-                $order_goods[$key1]['refund_order_id'] = '';
-                if(!empty($refund_order) && $refund_order['status'] != -3) {
-                    $order_goods[$key1]['refund_order_status'] = $refund_order['status'];
-                    $order_goods[$key1]['refund_order_id'] = $refund_order['id'];
-                }
-            }
+            // $refund_order = db('refund_order')->where('order_goods_id='.$order_goods[$key1]['order_goods_id'])->find();
+            // if($order['status'] < 3){
+            //     $order_goods[$key1]['refund_order_status'] = -2;
+            //     $order_goods[$key1]['refund_order_id'] = '';
+            //     if(!empty($refund_order) && $refund_order['status'] != -3) {
+            //         $order_goods[$key1]['refund_order_status'] = $refund_order['status'];
+            //         $order_goods[$key1]['refund_order_id'] = $refund_order['id'];
+            //     }
+            // }
         }
         $order['goods_data'] = $order_goods;
 
         $this->success('请求成功', $order);
 
     }
-    /**
-     *  取消退货
-     *
-     * @param int $user_id  用户ID
-     * @param int $refund_order_id  退货订单ID
-     */
-    public function cancel_refund()
-    {
-        $user_id = $this->request->request('user_id');
-        $refund_order_id = $this->request->request('refund_order_id');
-        if(!$user_id || !$refund_order_id) $this->error('参数不能为空', null, -1);
 
-        //判断订单状态
-        $refund_order = db('refund_order')->where('id='.$refund_order_id)->find();
-        if($refund_order['status'] != "0" || $refund_order['status'] != "1") {
-            $this->error('订单状态错误', null, -2);
-        }
-        //处理订单状态
-        db('refund_order')->where('id='.$refund_order_id)->setField('status', -3);
-        //判断改订单ID下是否还有退款订单，如果没有将订单的状态改为正常订单
-        $refund_orders = db('refund_order')->where('status >= "0" and status < "3" and order_id='.$refund_order['order_id'])->select();
-        if(empty($refund_orders)){
-            db('order')->where('id='.$refund_order_id)->setField('is_refund', 0);
-        }
-        $this->success('处理成功');
-    }
     /**
      * 查询物流
      * @param int $order_id  订单ID
@@ -943,61 +949,43 @@ class Order extends Api
         if(empty($order)){
             $this->error('订单不存在', null, -2);
         }
+        $Common = new Common;
         if($order['status'] == 2){
+            // 20200418
             $user = db('user')->where('id='.$order['user_id'])->find();
-            //当推荐人与上级是同一人时
-            if($user['superior_id'] == $user['inviter_id']) {
-                $p_user_goods_price = $order['goods_price'] - $order['profit'];
-                //加到上级用户余额
-                db('user')->where('id='.$user['superior_id'])->setInc('money', $order['goods_price']);
-                /*为推荐人(上级)添加流水记录*/
-                $money_log_1['user_id'] = $user['superior_id'];
-                $money_log_1['money_type'] = 1;
-                $money_log_1['type'] = 1;
-                $money_log_1['money'] = $order['goods_price'];
-                $money_log_1['memo'] = '余额';
-                $money_log_1['createtime'] = time();
-                $money_log[] = $money_log_1;
-                /*为推荐人添加流水记录*/
-            }else{//当推荐人与上级不是同一人时 上级用户给推荐人返利
-                $p_user_goods_price = $order['goods_price'] - $order['profit'] - $order['back_money'];
-                //加到上级用户余额
-                db('user')->where('id='.$user['superior_id'])->setInc('money', $order['goods_price'] - $order['back_money']);
-                /*为推荐人添加流水记录*/
-                $money_log_1['user_id'] = $user['superior_id'];
-                $money_log_1['money_type'] = 1;
-                $money_log_1['type'] = 1;
-                $money_log_1['money'] = $order['goods_price'] - $order['back_money'];
-                $money_log_1['memo'] = '余额';
-                $money_log_1['createtime'] = time();
-                $money_log[] = $money_log_1;
-                /*为推荐人添加流水记录*/
-                //推荐人返利  
-                if($order['back_money'] > 0){
-                    db('user')->where('id='.$user['inviter_id'])->setInc('money', $order['back_money']);
-                    /*为推荐人添加流水记录*/
-                    $money_log_2['user_id'] = $user['inviter_id'];
-                    $money_log_2['money_type'] = 1;
-                    $money_log_2['type'] = 1;
-                    $money_log_2['money'] = $order['back_money'];
-                    $money_log_2['memo'] = '返利';
-                    $money_log_2['createtime'] = time();
-                    $money_log[] = $money_log_2;
-                    /*为推荐人添加流水记录*/
+            // 如果记录不是空的，证明有给上级、原上级的返利
+            $user_back_money = db('user_back_money')
+            ->where('order_id='.$order_id)
+            ->order('id','asc')
+            ->select();
+            if(!empty($user_back_money)){
+                foreach ($user_back_money as $key => $value) {
+                    
+                    if($user_back_money['old_superior_id'] > 0){
+                        if($user_back_money['back_money'] > 0){
+                            db('user')
+                            ->where('id='.$user['old_superior_id'])
+                            ->setInc('money', $user_back_money['back_money']);
+                            $Common->ins_money_log($user_back_money['old_superior_id'], 1, 1, $user_back_money['back_money'], '余额', '返利');
+                        }
+                    }
+                    // 出货方ID
+                    if($user_back_money['p_user_id'] > 0){
+                        //加到上级用户余额
+                        db('user')
+                        ->where('id='.$user_back_money['p_user_id'])
+                        ->setInc('money', $user_back_money['shipment_money'] + $user_back_money['profit']);
+                        //扣除上级玉扣款字段
+                        db('user')
+                        ->where('id='.$user_back_money['p_user_id'])
+                        ->setDec('lock_goods_money', $user_back_money['shipment_money']);
+                        $Common->ins_money_log($user_back_money['p_user_id'], 1, 1, $user_back_money['shipment_money'], '余额', '成本价');
+                        if($user_back_money['profit'] > 0){
+                            $Common->ins_money_log($user_back_money['p_user_id'], 1, 1, $user_back_money['profit'], '余额', '利润');
+                        }
+                    }
                 }
             }
-            if($order['profit'] > 0){
-                $money_log_3['user_id'] = $user['superior_id'];
-                $money_log_3['money_type'] = 1;
-                $money_log_3['type'] = 1;
-                $money_log_3['money'] = $profit;
-                $money_log_3['memo'] = '利润';
-                $money_log_3['createtime'] = time();
-                $money_log[] = $money_log_3;
-            }
-            //扣除上级玉扣款字段
-            db('user')->where('id='.$user['superior_id'])->setDec('lock_goods_money', $p_user_goods_price);
-            db('user_money_log')->insertAll($money_log);
 
             $arr['status'] = 3;
             $arr['confirm_time'] = time();//确认收货时间
@@ -1012,6 +1000,7 @@ class Order extends Api
             $this->error('订单错误', null, -3);
         }
     }
+
 
     /******************退货******************/
     /**
@@ -1214,6 +1203,68 @@ class Order extends Api
         }else{
             $this->success('添加失败', null, -3);
         }
+    }
+
+    /**
+     *  取消退货
+     *
+     * @param int $user_id  用户ID
+     * @param int $refund_order_id  退货订单ID
+     */
+    public function cancel_refund()
+    {
+        $user_id = $this->request->request('user_id');
+        $refund_order_id = $this->request->request('refund_order_id');
+        if(!$user_id || !$refund_order_id) $this->error('参数不能为空', null, -1);
+
+        //判断订单状态
+        $refund_order = db('refund_order')->where('id='.$refund_order_id)->find();
+        if($refund_order['status'] != "0") {
+            $this->error('订单状态错误', null, -2);
+        }
+        //处理订单状态
+        db('refund_order')->where('id='.$refund_order_id)->setField('status', -3);
+        //判断改订单ID下是否还有退款订单，如果没有将订单的状态改为正常订单
+        // $refund_orders = db('refund_order')->where('status >= "0" and status < "3" and order_id='.$refund_order['order_id'])->select();
+        // if(empty($refund_orders)){
+            db('order')->where('id='.$refund_order_id)->setField('is_refund', 0);
+        // }
+        $this->success('处理成功');
+    }
+
+    /**
+     * 退货订单列表
+     *
+     * @param int $user_id  用户ID
+     */
+    public function refund_order_list()
+    {
+        $user_id = $this->request->request('user_id');
+        if(!$user_id) $this->error('参数user_id不能为空', null, -1);
+
+        $refund_order = db('refund_order')->select();
+        $data = [];
+        foreach ($refund_order as $key => $value) {
+            $data[$key]['id'] = $refund_order[$key]['id'];
+            $data[$key]['user_id'] = $refund_order[$key]['user_id'];
+            $data[$key]['order_goods_id'] = $refund_order[$key]['order_goods_id'];
+            $data[$key]['refund_type'] = $refund_order[$key]['refund_type'];
+            $data[$key]['order_sn'] = $refund_order[$key]['order_sn'];
+            $data[$key]['status'] = $refund_order[$key]['status'];
+            $data[$key]['goods_num'] = $refund_order[$key]['goods_num'];
+            $data[$key]['order_price'] = $refund_order[$key]['order_price'];
+
+            $order_goods = db('order_goods a')
+            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+            ->field('a.goods_id,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,a.goods_price as price')
+            ->where('a.id='.$refund_order[$key]['order_goods_id'])
+            ->select();
+            foreach ($order_goods as $key1 => $value1) {
+                if(!empty($order_goods[$key1]['image'])) $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
+            }
+            $data[$key]['goods_data'] = $order_goods;
+        }
+        $this->success('请求成功', $data);
     }
 
     /******************退货******************/

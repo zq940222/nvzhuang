@@ -38,6 +38,8 @@ class User extends Model
         $extend['avatar'] = $data['avatar']; //头像
         $extend['superior_id'] = $data['superior_id']; //上级ID
         $extend['inviter_id'] = $data['inviter_id']; //推荐人ID
+        // 20200418
+        $extend['old_superior_id'] = 0; //原上级ID
         $level = db('level')->where('id='.$agency_id)->find();
         $extend['goods_payment'] = $level['goods_payment']; //货款
         $extend['margin'] = $level['margin']; //保证金
@@ -70,6 +72,12 @@ class User extends Model
                 $user_bounty['money'] = $bonus;
                 $user_bounty['createtime'] = time();
                 db('user_bounty')->insert($user_bounty);
+                // 如果推荐人等级和用户要注册的等级相等，那么用户的原上级就是推荐人
+                $inviter_user = db('user')->where('id='.$data['inviter_id'])->find();
+                if($inviter_user['level_id'] == $data['agency_id'] && $data['agency_id'] != 1){
+                    db('user')->where('id='.$userinfo['id'])->setField('old_superior_id',$data['inviter_id']);
+                }
+
                 //判断走货上级是否存在
                 if($data['superior_id'] > 0){
                     //当邀请人和走货上级都存在时，先判断其是否是同一人，
@@ -93,7 +101,7 @@ class User extends Model
                         /*上级得到的钱END*/
                     }else{
                         $superior_money = $level['goods_payment'];
-                        $inviter_user = db('user')->where('id='.$data['inviter_id'])->find();
+                        
                         //如果邀请人和走货上级不是同一人时，并且注册人的注册等级==邀请人的等级，推荐人还会获得一笔上级给的返利
                         if($level['id'] == $inviter_user['level_id']){
                             //推荐人的返利 = 注册人所交等级货款 * 返利比例
@@ -132,15 +140,37 @@ class User extends Model
                         //利润入账标记
                         $Common->ins_money_log($data['superior_id'], 1, 1, $superior_money - $data['goods_payment'], '余额', '利润');
                         /*上级得到的钱END*/
-                        
                     }
                     //站内信通知：1.给走货上级
                     $message_template = db('message_template')->where('id=3')->find();
                     $content1 = str_replace('nick_name', $real_name, $message_template['message_content']);
                     $content2 = str_replace('level_name', $level['name'], $content1);
                     $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+
+                    // 20200418
+                    // 如果上级用户为一级，判断上级用户有没有直属一级上级，如果有，平台将给予直属一级上级 注册人货款*返利比例 的钱
+                    $superior_user = db('user')->where('id='.$data['superior_id'])->find();
+                    if($superior_user['level_id'] == 1){
+                        $level_tree= db('level_tree')->where('level_id=1 and user_id!='.$superior_user['id'])->select();
+                        $superior_superior_user = 0;
+                        foreach ($level_tree as $key => $value) {
+                            if(!empty($level_tree[$key]['level_1'])){
+                                $user_level = explode(',', $level_tree[$key]['level_1']);
+                                if(in_array($data['superior_id'], $user_level)){
+                                    $superior_superior_user = $level_tree[$key]['user_id'];
+                                }
+                            }
+                        }
+                        if($superior_superior_user > 0){
+                            $rebate_1 = db('level')->where('id=1')->value('rebate'); // 0.05
+                            $superior_superior_user_money = $level['goods_payment'] * $rebate_1;
+                            //返利
+                            db('user')->where('id='.$superior_superior_user)->setInc('money', $superior_superior_user_money);
+                            $Common->ins_money_log($superior_superior_user, 1, 1, $superior_superior_user_money '余额', '下级顶级代理返利');
+                        }
+                    }
                 }else{
-                    $inviter_user = db('user')->where('id='.$data['inviter_id'])->find();
+                    
                     if($level['id'] == $inviter_user['level_id']){
                         //如果注册人的注册等级==邀请人的等级,并且走货上级不存在，证明走货方为平台，平台将直接给推荐人返利(推荐人的返利=注册人所交等级货款*返利比例)
                         //推荐人的返利 = 注册人所交等级货款 * 返利比例
@@ -237,6 +267,8 @@ class User extends Model
         $level = db('level')->where('id='.$upgrade['level'])->find();
         // 升级前的等级
         $pre_level = db('level')->where('id='.$upgrade['pre_level'])->find();
+        // 原上级
+        $edit_user_data['old_superior_id'] = 0;
 
         Db::startTrans();
         $Common = new Common;
@@ -278,7 +310,7 @@ class User extends Model
         }
         // 如果原上级存在，给原上级代理变更通知
         if($upgrade['superior_id'] != $upgrade['new_superior_id']){
-            // 如果原上级存在，并且和新上级不是同一人，原上级将会获得一笔推荐奖
+            // 如果原上级存在，并且和新上级不是同一人，原上级将会获得一笔返利
             if($upgrade['superior_id'] > 0){
                 $superior_user = db('user')->where('id='.$upgrade['superior_id'])->find();
                 if($level['id'] == $superior_user['level_id']){
@@ -301,13 +333,15 @@ class User extends Model
                     $content2 = str_replace('level_name', $level['name'], $content1);
                     $Common->ins_message($upgrade['superior_id'], $message_template['message_title'], $content2);
                 }
-                
+                // 20200418
+                $edit_user_data['old_superior_id'] = $upgrade['superior_id'];
             }
             $edit_user_data['superior_id'] = $upgrade['new_superior_id'];
         }
+
         // 如果新上级存在，那么将升级用户走货上级为新上级，新上级将会获得[成本价+利润(如果升级用户原上级存在，新上级要扣除给原上级的返利)]
         if($upgrade['new_superior_id'] > 0){
-            // 新上级的到的钱：成本价+利润(如果邀请人存在，扣掉给邀请人的返利) == 用户升级的等级的货款 - 推荐人获得的返利
+            // 新上级的到的钱：成本价+利润(如果邀请人存在，扣掉给原上级的返利) == 用户升级的等级的货款 - 原上级获得的返利
             db('user')->where('id='.$upgrade['new_superior_id'])->setInc('money', $level['goods_payment'] - $rebate);
             // 站内信：新上级
             $message_template = db('message_template')->where('id=12')->find();
@@ -321,6 +355,32 @@ class User extends Model
             $Common->ins_money_log($upgrade['new_superior_id'], 1, 1, $profit, '余额', '利润');
             // 扣掉新上级锁住的货款
             db('user')->where('id='.$upgrade['new_superior_id'])->setDec('lock_goods_money', $upgrade['goods_payment']);
+
+            // 20200418
+            // 如果升级用户不是升一级
+            if($upgrade['level'] > 1){
+                $new_superior = db('user')->where('id='.$upgrade['new_superior_id'])->find();
+                // 如果上级用户为一级，判断上级用户有没有直属一级上级，如果有，平台将给予直属一级上级 注册人货款*返利比例 的钱
+                if($new_superior['level_id'] == 1){
+                    $level_tree = db('level_tree')->where('level_id=1 and user_id!='.$new_superior['id'])->select();
+                    $superior_superior_user = 0;
+                    foreach ($level_tree as $key => $value) {
+                        if(!empty($level_tree[$key]['level_1'])){
+                            $user_level = explode(',', $level_tree[$key]['level_1']);
+                            if(in_array($upgrade['superior_id'], $user_level)){
+                                $superior_superior_user = $level_tree[$key]['user_id'];
+                            }
+                        }
+                    }
+                    if($superior_superior_user > 0){
+                        $rebate_1 = db('level')->where('id=1')->value('rebate'); // 0.05
+                        $superior_superior_user_money = $level['goods_payment'] * $rebate_1;
+                        //返利
+                        db('user')->where('id='.$superior_superior_user)->setInc('money', $superior_superior_user_money);
+                        $Common->ins_money_log($superior_superior_user, 1, 1, $superior_superior_user_money '余额', '下级顶级代理返利');
+                    }
+                }
+            }
         }
         // 站内信：给升级用户
         $message_template = db('message_template')->where('id=19')->find();

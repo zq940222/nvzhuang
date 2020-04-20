@@ -2,6 +2,8 @@
 
 namespace app\admin\controller\order;
 
+use app\api\model\Order;
+
 use app\common\controller\Backend;
 use think\Db;
 use think\Exception;
@@ -86,17 +88,23 @@ class Refund extends Backend
                 //返回金额给用户
                 Db::startTrans();
                 try{
-                    $user = model('User')->find($order['user_id']);
-                    $user->setInc('money',$order->order_price);
-                    $order->save(['status' => 3]);
-                    Db::commit();
-
+                    $Order = new Order;
+                    $res = $Order->confirm_return($ids);
+                    if($res){
+                        Db::commit();
+                    }
                 }catch (Exception $exception){
                     Db::rollback();
                     $this->error($exception->getMessage());
                 }
             }else{
                 $order->save(['status' => $params['status']]);
+                if($params['status'] == -1){
+                    $refund_order = db('refund_order')->where('status>="0" and order_id='.$order['order_id'])->select();
+                    if(empty($refund_order)){
+                        db('order')->where('order')->setField('is_refund',0);
+                    }
+                }
             }
             $this->success();
         }else{
