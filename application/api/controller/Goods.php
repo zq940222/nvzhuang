@@ -82,7 +82,7 @@ class Goods extends Api
 
         if(!empty($price_interval)) $where .= ' and price'.$level.' between '.explode('-', $price_interval)[0].' and '.explode('-', $price_interval)[1];
 
-        if(!empty($search)) $where .= ' and keywords like "%'.$search.'%"';
+        if(!empty($search)) $where .= ' and keywords like "%'.$search.'%" or name like "%'.$search.'%"';
 
         $data = db('goods')
         ->field($field)
@@ -92,6 +92,14 @@ class Goods extends Api
         ->select();
         foreach ($data as $key => $value) {
             if(!empty($data[$key]['cover_image'])) $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
+            $spec_goods_price = db('spec_goods_price')->where('goods_id='.$data[$key]['goods_id'])->find();
+            $data[$key]['price1'] = $spec_goods_price['price1'];
+            $data[$key]['price2'] = $spec_goods_price['price2'];
+            $data[$key]['price3'] = $spec_goods_price['price3'];
+            $data[$key]['price4'] = $spec_goods_price['price4'];
+            $data[$key]['tag_price'] = $spec_goods_price['tag_price'];
+            $data[$key]['price'] = $spec_goods_price['price'];
+            $data[$key]['lprice'] = $spec_goods_price['price'.$level];
         }
 
         $this->success('请求成功', $data);

@@ -929,7 +929,8 @@ class Order extends Api
                 }
             }
             $data['state'] = $state;
-            $data['traces'] = array_reverse($traces);
+            // $data['traces'] = array_reverse($traces);
+            $data['traces'] = $traces;
         }
         $this->success('请求成功', $data);
     }
