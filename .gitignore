@@ -1,3 +1,11 @@
 runtime/
-.env/
+.env
 .idea/
+public/shop/
+public/uploads/
+application/api/controller/修改问题
+application/api/controller/前端修改.docx
+application/api/controller/后台修改.docx
+addons/
+application/admin/validate/Command.php
+application/admin/view/command/
