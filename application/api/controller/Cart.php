@@ -83,12 +83,16 @@ class Cart extends Api
         ->field('cart_id,goods_id,goods_spec_id,lprice,price,num')
         ->where('is_delete=0 and user_id='.$user_id)
         ->select();
-        foreach ($data as $key => $value) {
-            $goods = db('goods')->field('name,cover_image')->where('id',$data[$key]['goods_id'])->find();
-            $data[$key] = array_merge($value,$goods);
-            $data[$key]['spec_name'] = db('spec_goods_price')->where('id='.$data[$key]['goods_spec_id'])->value('key_name');
-            $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
+        if(!empty($data)){
+            foreach ($data as $key => $value) {
+                $goods = db('goods')->field('name,cover_image')->where('id',$data[$key]['goods_id'])->find();
+                dump($goods);
+                $data[$key] = array_merge($value,$goods);
+                $data[$key]['spec_name'] = db('spec_goods_price')->where('id='.$data[$key]['goods_spec_id'])->value('key_name');
+                $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
+            }
         }
+        
 
         $this->success('请求成功', $data);
 
