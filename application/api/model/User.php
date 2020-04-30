@@ -58,6 +58,7 @@ class User extends Model
             $userinfo = $auth->getUserinfo();
             //判断邀请人是否存在
             if($data['inviter_id'] > 0){
+                $inviter_user = db('user')->where('id='.$data['inviter_id'])->find();
                 //平台给的推荐奖(只要邀请人存在，平台都会给一笔推荐奖)
                 $bonus = db('level')->where('id='.$data['agency_id'])->value('bonus');
                 db('user')->where('id='.$data['inviter_id'])->setInc('money', $bonus);
@@ -72,11 +73,6 @@ class User extends Model
                 $user_bounty['money'] = $bonus;
                 $user_bounty['createtime'] = time();
                 db('user_bounty')->insert($user_bounty);
-                // 如果推荐人等级和用户要注册的等级相等，那么用户的原上级就是推荐人
-                $inviter_user = db('user')->where('id='.$data['inviter_id'])->find();
-                if($inviter_user['level_id'] == $data['agency_id'] && $data['agency_id'] != 1){
-                    db('user')->where('id='.$userinfo['id'])->setField('old_superior_id',$data['inviter_id']);
-                }
 
                 //判断走货上级是否存在
                 if($data['superior_id'] > 0){
@@ -84,7 +80,48 @@ class User extends Model
                     //如果不是，先用注册人所交等级货款*返利比例算出给推荐人的返利，在用注册人所交货款-返利，为走货上级拿到的钱(走货上级成本价+利润(扣掉给推荐人的返利的钱))
                     //如果是同一人，直接扣除走货上级(也是推荐人)的锁定货款，把成本价和利润直接加到用户余额里面
                     //这里要分成三个记录 余额+(成本价)、利润+、余额+(利润的入账标记)
-
+                    // A -> B -> C1 -> C2
+                    // 记录扣款人的上级的成本、利润、和给推荐人的返利
+                    $user_agent_back_money = db('user_agent_back_money')
+                    ->where('type=1 and status=0 and agent_id='.$apply_id)
+                    ->select();
+                    if(!empty($user_agent_back_money)){
+                        foreach ($user_agent_back_money as $key => $value) {
+                            if($user_agent_back_money[$key]['inviter_id'] > 0){
+                                if($user_agent_back_money[$key]['back_money'] > 0){
+                                    db('user')
+                                    ->where('id='.$user_agent_back_money[$key]['inviter_id'])
+                                    ->setInc('money', $user_agent_back_money[$key]['back_money']);
+                                    $Common->ins_money_log($user_agent_back_money[$key]['inviter_id'], 1, 1, $user_agent_back_money[$key]['back_money'], '余额', '返利');
+                                    //添加奖励金记录表
+                                    $user_bounty = array();
+                                    $user_bounty['user_id'] = $user_agent_back_money[$key]['inviter_id'];
+                                    $user_bounty['sub_id'] = $userinfo['id'];
+                                    $user_bounty['sub_level'] = $data['agency_id'];
+                                    $user_bounty['money'] = $user_agent_back_money[$key]['back_money'];
+                                    $user_bounty['createtime'] = time();
+                                    db('user_bounty')->insert($user_bounty);
+                                }
+                            }
+                            // 出货方ID
+                            if($user_agent_back_money[$key]['p_user_id'] > 0){
+                                //加到上级用户余额
+                                db('user')
+                                ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                                ->setInc('money', $user_agent_back_money[$key]['shipment_money'] + $user_agent_back_money[$key]['profit']);
+                                //扣除上级玉扣款字段
+                                db('user')
+                                ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                                ->setDec('lock_goods_money', $user_agent_back_money[$key]['shipment_money']);
+                                $Common->ins_money_log($user_agent_back_money[$key]['p_user_id'], 1, 1, $user_agent_back_money[$key]['shipment_money'], '余额', '成本价');
+                                if($user_agent_back_money[$key]['profit'] > 0){
+                                    $Common->ins_money_log($user_agent_back_money[$key]['p_user_id'], 1, 1, $user_agent_back_money[$key]['profit'], '余额', '利润');
+                                }
+                            }
+                            db('user_agent_back_money')->where('id='.$value['id'])->setField("status",1);
+                            db('user_agent_back_money')->where('id='.$value['id'])->setField("updatetime",time());
+                        }
+                    }
                     //扣掉上级锁定货款（上级成本价）
                     db('user')->where('id='.$data['superior_id'])->setDec('lock_goods_money', $data['goods_payment']);
                     //如果邀请人和走货上级是同一人
@@ -146,29 +183,6 @@ class User extends Model
                     $content1 = str_replace('nick_name', $real_name, $message_template['message_content']);
                     $content2 = str_replace('level_name', $level['name'], $content1);
                     $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
-
-                    // 20200418
-                    // 如果上级用户为一级，判断上级用户有没有直属一级上级，如果有，平台将给予直属一级上级 注册人货款*返利比例 的钱
-                    $superior_user = db('user')->where('id='.$data['superior_id'])->find();
-                    if($superior_user['level_id'] == 1){
-                        $level_tree= db('level_tree')->where('level_id=1 and user_id!='.$superior_user['id'])->select();
-                        $superior_superior_user = 0;
-                        foreach ($level_tree as $key => $value) {
-                            if(!empty($level_tree[$key]['level_1'])){
-                                $user_level = explode(',', $level_tree[$key]['level_1']);
-                                if(in_array($data['superior_id'], $user_level)){
-                                    $superior_superior_user = $level_tree[$key]['user_id'];
-                                }
-                            }
-                        }
-                        if($superior_superior_user > 0){
-                            $rebate_1 = db('level')->where('id=1')->value('rebate'); // 0.05
-                            $superior_superior_user_money = $level['goods_payment'] * $rebate_1;
-                            //返利
-                            db('user')->where('id='.$superior_superior_user)->setInc('money', $superior_superior_user_money);
-                            $Common->ins_money_log($superior_superior_user, 1, 1, $superior_superior_user_money '余额', '下级顶级代理返利');
-                        }
-                    }
                 }else{
                     
                     if($level['id'] == $inviter_user['level_id']){
@@ -179,7 +193,7 @@ class User extends Model
                         //推荐人的返利 + 平台给的推荐将(上面已添加进推荐人账户)
                         db('user')->where('id='.$data['inviter_id'])->setInc('money', $inviter_rebate);
                         //流水记录
-                        $Common->ins_money_log($data['inviter_id'], 1, 1, $inviter_rebate, '余额', '推荐人的返利');
+                        $Common->ins_money_log($data['inviter_id'], 1, 1, $inviter_rebate, '余额', '返利');
                         /*推荐人的到的钱END*/
                         //站内信通知：1.给推荐人
                         $message_template = db('message_template')->where('id=3')->find();
@@ -235,13 +249,42 @@ class User extends Model
                 if($data['inviter_id'] != $data['superior_id']){
                     $Common->ins_message($data['superior_id'], $message_template['message_title'], $content1);
                 }
-                $Common = new Common;
                 $Common->ins_money_log($data['superior_id'], 2, 1, $data['goods_payment'], '货款', '代理【'.$data['name'].'】后台审核失败，货款退还');
                 if($data['recharge_goods_money'] > 0){
                     db('user')->where('id','=', $data['superior_id'])->setInc('recharge_goods_money', $data['recharge_goods_money']);
                 }
                 db('user')->where('id='.$data['superior_id'])->setInc('goods_payment', $data['goods_payment']);
                 db('user')->where('id='.$data['superior_id'])->setDec('lock_goods_money', $data['goods_payment']);
+                // 记录扣款人的上级及推荐人的充值货款判断
+                $user_agent_back_money = db('user_agent_back_money')
+                ->where('type=1 and status=0 and agent_id='.$apply_id)
+                ->select();
+                if(!empty($user_agent_back_money)){
+                    foreach ($user_agent_back_money as $key => $value) {
+                        // 出货方ID
+                        if($user_agent_back_money[$key]['p_user_id'] > 0){
+                            // key+1是当前用户的上级所使用的充值货款记录
+                            db('user')
+                            ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                            ->setInc('goods_payment', $user_agent_back_money[$key]['shipment_money']);
+                            if(isset($user_agent_back_money[$key+1])){
+                                db('user')
+                                ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                                ->setInc('recharge_goods_money', $user_agent_back_money[$key+1]['money']);
+                            }
+                            db('user')
+                            ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                            ->setDec('lock_goods_money', $user_agent_back_money[$key]['shipment_money']);
+                            $Common->ins_money_log($user_agent_back_money[$key]['p_user_id'], 2, 1, $data['goods_payment'], '货款', '代理申请审核失败，预扣货款退回');
+                            // 站内信：下单用户。
+                            $message_template = db('message_template')->where('id=5')->find();
+                            $content = str_replace('nick_name', $data['real_name'], $message_template['message_content']);
+                            $Common->ins_message($user_agent_back_money[$key]['p_user_id'], $message_template['message_title'], $content.'预扣货款退回');
+                        }
+                        db('user_agent_back_money')->where('id='.$value['id'])->setField("status",-1);
+                        db('user_agent_back_money')->where('id='.$value['id'])->setField("updatetime",time());
+                    }
+                }
             }
             
         }
@@ -267,8 +310,6 @@ class User extends Model
         $level = db('level')->where('id='.$upgrade['level'])->find();
         // 升级前的等级
         $pre_level = db('level')->where('id='.$upgrade['pre_level'])->find();
-        // 原上级
-        $edit_user_data['old_superior_id'] = 0;
 
         Db::startTrans();
         $Common = new Common;
@@ -283,7 +324,7 @@ class User extends Model
                 ->setField('recharge_goods_money', $user['recharge_goods_money'] / $pre_level['discount'] * $level['discount']);
             }
         }
-        // 给原上级的推荐奖，当升级用户等级==邀请人等级产生
+        // 给推荐人的推荐奖
         $rebate = 0;
         // 1.将货款和保证金加到用户数据里
         db('user')->where('id='.$upgrade['user_id'])->setInc('goods_payment', $level['goods_payment']);
@@ -306,41 +347,83 @@ class User extends Model
             $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
             $content2 = str_replace('level_name', $level['name'], $content1);
             $Common->ins_message($user['inviter_id'], $message_template['message_title'], $content2);
-            
+
+            $inviter_user = db('user')->where('id='.$user['inviter_id'])->find();
+            // 如果推荐人不是新上级，给推荐人返利
+            if($inviter_user['id'] != $upgrade['new_superior_id']){
+                // 推荐人返利
+                // 如果新上级也存在，推荐奖由新上级出，如果不存在，推荐奖由平台出
+                $rebate = $level['goods_payment'] * $level['rebate'];
+                db('user')->where('id='.$inviter_user['id'])->setInc('money', $rebate);
+                $Common->ins_money_log($inviter_user['id'], 1, 1, $rebate, '余额', '返利');
+                //添加奖励金记录表
+                $user_bounty = array();
+                $user_bounty['user_id'] = $inviter_user['id'];
+                $user_bounty['sub_id'] = $user['id'];
+                $user_bounty['sub_level'] = $upgrade['level'];
+                $user_bounty['money'] = $rebate;
+                $user_bounty['createtime'] = time();
+                db('user_bounty')->insert($user_bounty);
+            }
         }
         // 如果原上级存在，给原上级代理变更通知
         if($upgrade['superior_id'] != $upgrade['new_superior_id']){
-            // 如果原上级存在，并且和新上级不是同一人，原上级将会获得一笔返利
+            // 如果原上级存在，并且和新上级不是同一人，并且用户升级的等级和原上级相同，原上级将会获得一笔返利
             if($upgrade['superior_id'] > 0){
-                $superior_user = db('user')->where('id='.$upgrade['superior_id'])->find();
-                if($level['id'] == $superior_user['level_id']){
-                    // 推荐奖
-                    // 如果新上级也存在，推荐奖由新上级出，如果不存在，推荐奖由平台出
-                    $rebate = $level['goods_payment'] * $level['rebate'];
-                    db('user')->where('id='.$upgrade['superior_id'])->setInc('money', $rebate);
-                    $Common->ins_money_log($upgrade['superior_id'], 1, 1, $rebate, '余额', '原上级的推荐奖励金');
-                    //添加奖励金记录表
-                    $user_bounty = array();
-                    $user_bounty['user_id'] = $upgrade['superior_id'];
-                    $user_bounty['sub_id'] = $user['id'];
-                    $user_bounty['sub_level'] = $upgrade['level'];
-                    $user_bounty['money'] = $rebate;
-                    $user_bounty['createtime'] = time();
-                    db('user_bounty')->insert($user_bounty);
-                    // 站内信：原上级
-                    $message_template = db('message_template')->where('id=13')->find();
-                    $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
-                    $content2 = str_replace('level_name', $level['name'], $content1);
-                    $Common->ins_message($upgrade['superior_id'], $message_template['message_title'], $content2);
-                }
-                // 20200418
-                $edit_user_data['old_superior_id'] = $upgrade['superior_id'];
+                // 站内信：原上级
+                $message_template = db('message_template')->where('id=13')->find();
+                $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                $content2 = str_replace('level_name', $level['name'], $content1);
+                $Common->ins_message($upgrade['superior_id'], $message_template['message_title'], $content2);
             }
-            $edit_user_data['superior_id'] = $upgrade['new_superior_id'];
         }
 
         // 如果新上级存在，那么将升级用户走货上级为新上级，新上级将会获得[成本价+利润(如果升级用户原上级存在，新上级要扣除给原上级的返利)]
         if($upgrade['new_superior_id'] > 0){
+            $edit_user_data['superior_id'] = $upgrade['new_superior_id'];
+            // 记录扣款人的上级及原上级的充值货款判断
+            $user_agent_back_money = db('user_agent_back_money')
+            ->where('type=2 and status=0 and agent_id='.$id)
+            ->select();
+            if(!empty($user_agent_back_money)){
+                foreach ($user_agent_back_money as $key => $value) {
+                    if($user_agent_back_money[$key]['inviter_id'] > 0){
+                        if($user_agent_back_money[$key]['back_money'] > 0){
+                            db('user')
+                            ->where('id='.$user_agent_back_money[$key]['inviter_id'])
+                            ->setInc('money', $user_agent_back_money[$key]['back_money']);
+                            $Common->ins_money_log($user_agent_back_money[$key]['inviter_id'], 1, 1, $user_agent_back_money[$key]['back_money'], '余额', '返利');
+                            //添加奖励金记录表
+                            $user_bounty = array();
+                            $user_bounty['user_id'] = $user_agent_back_money[$key]['inviter_id'];
+                            $user_bounty['sub_id'] = $user['id'];
+                            $user_bounty['sub_level'] = $upgrade['agency_id'];
+                            $user_bounty['money'] = $user_agent_back_money[$key]['back_money'];
+                            $user_bounty['createtime'] = time();
+                            db('user_bounty')->insert($user_bounty);
+                        }
+                    }
+                    // 出货方ID
+                    if($user_agent_back_money[$key]['p_user_id'] > 0){
+                        //加到上级用户余额
+                        db('user')
+                        ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                        ->setInc('money', $user_agent_back_money[$key]['shipment_money'] + $user_agent_back_money[$key]['profit']);
+                        //扣除上级玉扣款字段
+                        db('user')
+                        ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                        ->setDec('lock_goods_money', $user_agent_back_money[$key]['shipment_money']);
+                        $Common->ins_money_log($user_agent_back_money[$key]['p_user_id'], 1, 1, $user_agent_back_money[$key]['shipment_money'], '余额', '成本价');
+                        if($user_agent_back_money[$key]['profit'] > 0){
+                            $Common->ins_money_log($user_agent_back_money[$key]['p_user_id'], 1, 1, $user_agent_back_money[$key]['profit'], '余额', '利润');
+                        }
+                    }
+                    db('user_agent_back_money')->where('id='.$value['id'])->setField("status",1);
+                    db('user_agent_back_money')->where('id='.$value['id'])->setField("updatetime",time());
+                }
+            }
+
+
             // 新上级的到的钱：成本价+利润(如果邀请人存在，扣掉给原上级的返利) == 用户升级的等级的货款 - 原上级获得的返利
             db('user')->where('id='.$upgrade['new_superior_id'])->setInc('money', $level['goods_payment'] - $rebate);
             // 站内信：新上级
@@ -355,33 +438,8 @@ class User extends Model
             $Common->ins_money_log($upgrade['new_superior_id'], 1, 1, $profit, '余额', '利润');
             // 扣掉新上级锁住的货款
             db('user')->where('id='.$upgrade['new_superior_id'])->setDec('lock_goods_money', $upgrade['goods_payment']);
-
-            // 20200418
-            // 如果升级用户不是升一级
-            if($upgrade['level'] > 1){
-                $new_superior = db('user')->where('id='.$upgrade['new_superior_id'])->find();
-                // 如果上级用户为一级，判断上级用户有没有直属一级上级，如果有，平台将给予直属一级上级 注册人货款*返利比例 的钱
-                if($new_superior['level_id'] == 1){
-                    $level_tree = db('level_tree')->where('level_id=1 and user_id!='.$new_superior['id'])->select();
-                    $superior_superior_user = 0;
-                    foreach ($level_tree as $key => $value) {
-                        if(!empty($level_tree[$key]['level_1'])){
-                            $user_level = explode(',', $level_tree[$key]['level_1']);
-                            if(in_array($upgrade['superior_id'], $user_level)){
-                                $superior_superior_user = $level_tree[$key]['user_id'];
-                            }
-                        }
-                    }
-                    if($superior_superior_user > 0){
-                        $rebate_1 = db('level')->where('id=1')->value('rebate'); // 0.05
-                        $superior_superior_user_money = $level['goods_payment'] * $rebate_1;
-                        //返利
-                        db('user')->where('id='.$superior_superior_user)->setInc('money', $superior_superior_user_money);
-                        $Common->ins_money_log($superior_superior_user, 1, 1, $superior_superior_user_money '余额', '下级顶级代理返利');
-                    }
-                }
-            }
         }
+        
         // 站内信：给升级用户
         $message_template = db('message_template')->where('id=19')->find();
         $content1 = str_replace('level_name', $level['name'], $message_template['message_content']);
@@ -430,6 +488,38 @@ class User extends Model
             }
             db('user')->where('id','=', $upgrade['new_superior_id'])->setInc('goods_payment', $upgrade['goods_payment']);
             db('user')->where('id','=', $upgrade['new_superior_id'])->setDec('lock_goods_money', $upgrade['goods_payment']);
+
+            // 记录扣款人的上级及原上级的充值货款判断
+            $user_agent_back_money = db('user_agent_back_money')
+            ->where('type=2 and status=0 and agent_id='.$id)
+            ->select();
+            if(!empty($user_agent_back_money)){
+                foreach ($user_agent_back_money as $key => $value) {
+                    // 出货方ID
+                    if($user_agent_back_money[$key]['p_user_id'] > 0){
+                        // key+1是当前用户的上级所使用的充值货款记录
+                        db('user')
+                        ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                        ->setInc('goods_payment', $user_agent_back_money[$key]['shipment_money']);
+                        if(isset($user_agent_back_money[$key+1])){
+                            db('user')
+                            ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                            ->setInc('recharge_goods_money', $user_agent_back_money[$key+1]['money']);
+                        }
+                        db('user')
+                        ->where('id='.$user_agent_back_money[$key]['p_user_id'])
+                        ->setDec('lock_goods_money', $user_agent_back_money[$key]['shipment_money']);
+                        $Common->ins_money_log($user_agent_back_money[$key]['p_user_id'], 2, 1, $data['goods_payment'], '货款', '代理升级审核失败，预扣货款退回');
+                        // 站内信：下单用户。
+                        $message_template = db('message_template')->where('id=14')->find();
+                        $content = str_replace('nick_name', $data['real_name'], $message_template['message_content']);
+                        $Common->ins_message($user_agent_back_money[$key]['p_user_id'], $message_template['message_title'], $content.'预扣货款退回');
+                    }
+                    db('user_agent_back_money')->where('id='.$value['id'])->setField("status",-1);
+                    db('user_agent_back_money')->where('id='.$value['id'])->setField("updatetime",time());
+                }
+            }
+
         }
         // 给原上级发送站内信
         if($user['superior_id'] != $upgrade['new_superior_id'] && $user['superior_id'] > 0) {
@@ -518,6 +608,7 @@ class User extends Model
                 $money_log_1['type'] = 1;
                 $money_log_1['money'] = $data['money'];
                 $money_log_1['memo'] = '货款';
+                $money_log_1['desc'] = '货款充值';
                 $money_log_1['createtime'] = time();
                 $money_log[] = $money_log_1;
                 db('user_money_log')->insertAll($money_log);
@@ -710,7 +801,8 @@ class User extends Model
                         unset($sup_level_child[$key]);
                     }
                 }
-                sort( array_unique( $sup_level_child ) );
+                $sup_level_child = array_unique( $sup_level_child );
+                sort( $sup_level_child );
                 db('level_tree')->where('user_id='.$superior_id)->setField('level_'.$pre_level, implode(',', $sup_level_child));
 
                 $new_superior = db('level_tree')->where('user_id='.$new_superior_id)->find();
@@ -871,5 +963,7 @@ class User extends Model
             }
         }
     }
+
+
 
 }

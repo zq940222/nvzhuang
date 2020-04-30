@@ -54,7 +54,7 @@ class Agentapply extends Backend
             if ($params) {
                 $params = $this->preExcludeFields($params);
                 $result = false;
-                Db::startTrans();
+                // Db::startTrans();
                 try {
                     $result = $row->allowField(true)->save($params);
                     if ($params['status'] == 1){
@@ -74,15 +74,12 @@ class Agentapply extends Backend
                             $result = false;
                         }
                     }
-                    Db::commit();
+                    // Db::commit();
                 } catch (ValidateException $e) {
-                    Db::rollback();
                     $this->error($e->getMessage());
                 } catch (PDOException $e) {
-                    Db::rollback();
                     $this->error($e->getMessage());
                 } catch (Exception $e) {
-                    Db::rollback();
                     $this->error($e->getMessage());
                 }
                 if ($result !== false) {

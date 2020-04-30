@@ -31,10 +31,7 @@ class Goods extends Api
      * @param int $count=10  数量
      * @param int $is_new  是否最新:0=否,1=是
      * @param string $sentiment  人气：asc=从小到大，desc=从大到小（click_count）
-     * @param string $price  价格：asc=从小到大，desc=从大到小
-     * @param int $brand_id  品牌ID
-     * @param int $style_id  款式ID
-     * @param int $activity_id  活动ID
+     * @param string $cate_id  分类ID：字符串拼接（逗号）
      * @param string $price_interval  价格区间
      * @param string $search  搜索
      */
@@ -45,10 +42,11 @@ class Goods extends Api
         $count = $this->request->request('count');
         $is_new = $this->request->request('is_new');
         $sentiment = $this->request->request('sentiment');
-        $price = $this->request->request('price');
-        $brand_id = $this->request->request('brand_id');
-        $style_id = $this->request->request('style_id');
-        $activity_id = $this->request->request('activity_id');
+        // $price = $this->request->request('price');
+        // $brand_id = $this->request->request('brand_id');
+        // $style_id = $this->request->request('style_id');
+        // $activity_id = $this->request->request('activity_id');
+        $cate_id = $this->request->request('cate_id');
         $price_interval = $this->request->request('price_interval');
         $search = $this->request->request('search');
 
@@ -72,13 +70,15 @@ class Goods extends Api
 
         if(!empty($sentiment)) $order['click_count'] = $sentiment;
 
-        if(!empty($price)) $order['price'.$level] = $price;
+        // if(!empty($price)) $order['price'.$level] = $price;
 
-        if(!empty($brand_id)) $where .= ' and brand_id='.$brand_id;
+        // if(!empty($brand_id)) $where .= ' and brand_id='.$brand_id;
 
-        if(!empty($style_id)) $where .= ' and style_id='.$style_id;
+        // if(!empty($style_id)) $where .= ' and style_id='.$style_id;
 
-        if(!empty($activity_id)) $where .= ' and activity_id='.$activity_id;
+        // if(!empty($activity_id)) $where .= ' and activity_id='.$activity_id;
+
+        if(!empty($cate_id)) $where .= ' and activity_id='.$cate_id;
 
         if(!empty($price_interval)) $where .= ' and price'.$level.' between '.explode('-', $price_interval)[0].' and '.explode('-', $price_interval)[1];
 
@@ -129,6 +129,17 @@ class Goods extends Api
         ->field($field)
         ->where($where)
         ->find();
+        $spec_goods_price = db('spec_goods_price')->where('goods_id='.$goods_id)->find();
+        if(!empty($spec_goods_price)){
+            $goods['price1'] = $spec_goods_price['price1'];
+            $goods['price2'] = $spec_goods_price['price2'];
+            $goods['price3'] = $spec_goods_price['price3'];
+            $goods['price4'] = $spec_goods_price['price4'];
+            $goods['tag_price'] = $spec_goods_price['tag_price'];
+            $goods['price'] = $spec_goods_price['price'];
+            $goods['lprice'] = $spec_goods_price['price'.$level];
+        }
+        
         if(empty($goods)) $this->error(__('商品不存在'), null, -2);
         if(!empty($goods['cover_image'])) $goods['cover_image'] = get_http_host($goods['cover_image']);
         if(!empty($goods['goods_images'])) {
@@ -189,32 +200,47 @@ class Goods extends Api
     public function cate_list()
     {
         $data = array();
-        $site = Config::get('site.categorytype');
-        ksort($site);
-        foreach ($site as $key => $value) {
-            $cate = array();
-            $cat_name = $value;
-            $cat_data = db('category')
-            ->field('id as '.$key.'_id,name')
-            ->where('pid=0 and type="'.$key.'"')
+        $data = db('category')
+        ->field('id,pid,name,nickname,status')
+        ->where('pid=0 and status="normal"')
+        ->order('weigh','asc')
+        ->select();
+        foreach ($data as $key => $value) {
+            $child = db('category')
+            ->field('id,pid,name,nickname,status')
+            ->where('pid='.$data[$key]['id'].' and status="normal"')
             ->order('weigh','asc')
             ->select();
-            if($key == 'style') {
-                foreach ($cat_data as $keys => $values) {
-                    $cat_data[$keys]['child'] = db('category')
-                    ->field('id as '.$key.'_id,name')
-                    ->where('pid='.$cat_data[$keys][$key.'_id'].' and type="'.$key.'"')
-                    ->order('weigh','asc')
-                    ->select();
-                }
+            if(!empty($child)){
+                $data[$key]['child'] = $child;
             }
-            if(!empty($cat_data)) {
-                $cate['cat_name'] = $cat_name;
-                $cate['cat_data'] = $cat_data;
-                $data[] = $cate;
-            }
-            
         }
+        // $site = Config::get('site.categorytype');
+        // ksort($site);
+        // foreach ($site as $key => $value) {
+        //     $cate = array();
+        //     $cat_name = $value;
+        //     $cat_data = db('category')
+        //     ->field('id as '.$key.'_id,name')
+        //     // ->where('pid=0 and type="'.$key.'"')
+        //     ->order('weigh','asc')
+        //     ->select();
+        //     if($key == 'style') {
+        //         foreach ($cat_data as $keys => $values) {
+        //             $cat_data[$keys]['child'] = db('category')
+        //             ->field('id as '.$key.'_id,name')
+        //             ->where('pid='.$cat_data[$keys][$key.'_id'].' and type="'.$key.'"')
+        //             ->order('weigh','asc')
+        //             ->select();
+        //         }
+        //     }
+        //     if(!empty($cat_data)) {
+        //         $cate['cat_name'] = $cat_name;
+        //         $cate['cat_data'] = $cat_data;
+        //         $data[] = $cate;
+        //     }
+            
+        // }
         $this->success('请求成功', $data);
     }
 

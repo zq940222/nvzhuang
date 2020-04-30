@@ -5,6 +5,7 @@ namespace app\api\controller;
 use app\common\controller\Api;
 use app\common\model\Config;
 use app\common\library\Sms;
+// use app\api\model\User;
 use fast\Random;
 use think\Validate;
 use think\Session;
@@ -16,7 +17,7 @@ use think\Request;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info','get_qrcode','withdraw_apply_success','withdraw_apply_error','recharge_apply_success','recharge_apply_error','service'];
+    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info','get_qrcode','withdraw_apply_success','withdraw_apply_error','recharge_apply_success','recharge_apply_error','service','get_parent_user'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -117,6 +118,7 @@ class User extends Api
     public function apply_agent()
     {
         $superior_id = $this->request->request('superior_id');
+        if($superior_id == 1) $superior_id = 0;
         if(!empty($superior_id)){
             $data['inviter_id'] = $superior_id;
         }
@@ -132,6 +134,9 @@ class User extends Api
         $data['bank_account'] = $this->request->request('bank_account');
         $data['pay_time'] = $this->request->request('pay_time');
         $data['avatar'] = $this->request->request('avatar');
+        if($data['avatar'] == 'img/upfile.png') {
+            $data['avatar'] = '/uploads/avatar.png';
+        }
         $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
         $level = db('level')->where('id='.$data['agency_id'])->find();
         
@@ -153,10 +158,10 @@ class User extends Api
         // }
         /****验证码验证end****/
         /*--申请一个身份证一个账号--*/
-        $user = db('user')->where('status="1" and real_name="'.$data['name'].'" and id_card="'.$data['id_card'].'"')->find();
-        if(!empty($user)) {
-            $this->error('该身份证号已申请过账号', null, -3);
-        }
+        // $user = db('user')->where('status="1" and id_card="'.$data['id_card'].'"')->find();
+        // if(!empty($user)) {
+        //     $this->error('该身份证号已申请过账号', null, -3);
+        // }
         Db::startTrans();
         //先判断邀请人id是否存在
         if(!empty($data['inviter_id'])){
@@ -192,20 +197,12 @@ class User extends Api
                     $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
                     $content2 = str_replace('level_name', $level['name'], $content1);
                     $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                    Db::commit();
                     $this->error('上级资金不足，请提醒补充', null, -4);
                 }else{
-                    //判断走货上级是否有充值的货款，如果有优先走充值的货款
-                    if($superior_user['recharge_goods_money'] < $superior_goods_payment){
-                        db('user')->where('id='.$superior_user['id'])->setDec('recharge_goods_money', $superior_user['recharge_goods_money']);
-                        $data['recharge_goods_money'] = $superior_user['recharge_goods_money'];
-                    }else{
-                        db('user')->where('id='.$superior_user['id'])->setDec('recharge_goods_money', $superior_goods_payment);
-                        $data['recharge_goods_money'] = $superior_goods_payment;
-                    }
-                    db('user')->where('id='.$data['superior_id'])->setDec('goods_payment', $superior_goods_payment);
-                    db('user')->where('id='.$data['superior_id'])->setInc('lock_goods_money', $superior_goods_payment);
-                    /*添加流水记录*/
-                    $Common->ins_money_log($data['superior_id'], 2, 2, $superior_goods_payment, '货款', '预扣除代理【'.$data['name'].'】注册货款');
+                    //判断走货上级是否有充值的货款，如果有优先走入代理的货款
+                    // 递归判断上级是否使用了充值货款
+                    $uabm_arr = $this->parent_goods_payment($superior_user['id'],$superior_goods_payment,$Common);
                 }
             }
             //给推荐人发送的代理申请消息
@@ -216,13 +213,19 @@ class User extends Api
         }
         
         $data['createtime'] = time();
-        $res = db('agent_apply')->insert($data);
+        $res = db('agent_apply')->insertGetId($data);
         if($res) {
+            if(isset($uabm_arr) && !empty($uabm_arr)){
+                $uabm_ids = implode(',', $uabm_arr);
+                db('user_agent_back_money')
+                ->where('status=0 and id in ('.$uabm_ids.')')
+                ->update(['type'=>1,'agent_id'=>$res]);
+            }
             Db::commit();
             $this->success('提交成功');
         }else{
             Db::rollback();
-            $this->success('创建数据是败', $res, -2);
+            $this->success('创建数据失败', $false, -2);
         }
 
         
@@ -319,16 +322,8 @@ class User extends Api
                         $this->error('上级资金不足，请提醒补充', null, -4);
                     }else{
                         // 如果充足，预扣新上级货款
-                        if($new_p_user['recharge_goods_money'] < $new_p_goods_payment){
-                            db('user')->where('id='.$new_p_user['id'])->setDec('recharge_goods_money', $new_p_user['recharge_goods_money']);
-                            $data['recharge_goods_money'] = $new_p_user['recharge_goods_money'];
-                        }else{
-                            db('user')->where('id='.$new_p_user['id'])->setDec('recharge_goods_money', $new_p_goods_payment);
-                            $data['recharge_goods_money'] = $new_p_goods_payment;
-                        }
-
-                        db('user')->where('id='.$new_p_user['id'])->setDec('goods_payment', $new_p_goods_payment);
-                        db('user')->where('id='.$new_p_user['id'])->setInc('lock_goods_money', $new_p_goods_payment);
+                        // 递归判断上级是否使用了充值货款
+                        $uabm_arr = $this->parent_goods_payment($new_p_user['id'],$new_p_goods_payment,$Common);
 
                         // 站内信通知：1.新上级的通知
                         $message_template = db('message_template')->where('id=8')->find();
@@ -336,7 +331,7 @@ class User extends Api
                         $content2 = str_replace('level_name', $level['name'], $content1);
                         $Common->ins_message($new_p_user['id'], $message_template['message_title'], $content2);
                         // 流水记录
-                        $Common->ins_money_log($new_p_user['id'], 2, 2, $new_p_goods_payment, '货款', '下级代理升级预扣货款');
+                        // $Common->ins_money_log($new_p_user['id'], 2, 2, $new_p_goods_payment, '货款', '下级代理升级预扣货款');
 
                         // 如果新上级和原上级ID不同，给原上级发送站内信通知
                         if($data['superior_id'] != $data['new_superior_id']){
@@ -379,8 +374,14 @@ class User extends Api
         $Common->ins_message($data['user_id'], $message_template['message_title'], $content1);
 
         $data['createtime'] = time();
-        $res = db('agent_upgrade')->insert($data);
+        $res = db('agent_upgrade')->insertGetId($data);
         if($res) {
+            if(isset($uabm_arr) && !empty($uabm_arr)){
+                $uabm_ids = implode(',', $uabm_arr);
+                db('user_agent_back_money')
+                ->where('status=0 and id in ('.$uabm_ids.')')
+                ->update(['type'=>2,'agent_id'=>$res]);
+            }
             Db::commit();
             $this->success('提交成功');
         }else{
@@ -546,19 +547,20 @@ class User extends Api
         }
     }
 
-    public function get_parent_user($id, $level)
+    public function get_parent_user($id, $level, $p_user_id = 0)
     {
         $user = db('user')->where('id='.$id)->find();
         if($user['superior_id'] == 0){
-            return 0;
+            $p_user_id = 0;
         }else{
             $p_user = db('user')->where('id='.$user['superior_id'])->find();
             if($p_user['level_id'] >= $level){
-                $this->get_parent_user($p_user['id'], $level);
+                $p_user_id = $this->get_parent_user($p_user['id'], $level);
             }else{
-                return $p_user['id'];
+                $p_user_id = $p_user['id'];
             }
         }
+        return $p_user_id;
     }
 
     /**
@@ -962,10 +964,15 @@ class User extends Api
         // dump('当前用户:');
         $data['header'] = $Order->get_order_header($user_id, $date);
         if(!empty($agency_data)){
+            $firstday = date('Y-m-01', strtotime($date));
+            $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
+            $firstday_time = strtotime($firstday);
+            $lastday_time = strtotime($lastday);
+            $where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
             foreach ($agency_data as $key => $value) {
                 // $agency_data[$key]['team_money'] = $this->get_team_money($agency_data[$key]['user_id']);
                 // dump('直属下级:');
-                $agency_data[$key]['team_money'] = $Order->get_order_header($agency_data[$key]['user_id'], $date)['total_sales'];
+                $agency_data[$key]['team_money'] = $Order->get_team_money($agency_data[$key]['user_id'], $where)['team_money'];
             }
             // dump($agency_data);
             if($type == 1){
@@ -975,7 +982,7 @@ class User extends Api
                 ->field('a.id as user_id,a.avatar,a.nickname,b.nickname as level_name,a.goods_payment')
                 ->where('a.id='.$user_id)
                 ->find();
-                $agency['team_money'] = $Order->get_team_money($user_id)['team_money'];
+                $agency['team_money'] = $data['header']['total_sales'];
                 $data['agency_data'][] = $agency;
                 foreach ($agency_data as $key => $value) {
                     $data['agency_data'][] = $agency_data[$key];
@@ -1162,6 +1169,112 @@ class User extends Api
 
 
 
+    // 递归扣除一条线上每个用户的直属上级货款
+    // user_id          下单用户ID
+    // total_amount     用户使用的充值货款数量
+    // $Common          $Common 对象
+    // $array           方法返回的执行成功ID集
+    public function parent_goods_payment($user_id,$total_amount,$Common,$array = [])
+    {
+        $user = db('user')->where('id='.$user_id)->find();
+        $gm_money = 0;
+        $back_money = 0;
+
+        //判断用户货款剩余与充值货款剩余是否相等
+        if($user['goods_payment'] == $user['recharge_goods_money']){
+            $gm_money = $total_amount;
+        }else{
+            if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
+                $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+            }
+        }
+        db('user')->where('id='.$user_id)->setDec('recharge_goods_money', $gm_money);
+        db('user')->where('id='.$user_id)->setDec('goods_payment',$total_amount);
+        db('user')->where('id='.$user_id)->setInc('lock_goods_money',$total_amount);
+        $Common->ins_money_log($user_id, 2, 2, $total_amount, '货款', '预扣除代理货款');
+
+        // 如果用户使用充值货款
+        if($gm_money > 0){
+            $user_level = db('level')->where('id='.$user['level_id'])->find();
+            // 推荐人返利 = 提货用户使用的充值货款 * 提货用户的返利折扣
+            $back_money = $gm_money * $user_level['rebate'];
+            if($user['superior_id'] > 0){
+                $p_user = db('user')->where('id='.$user['superior_id'])->find();
+                $p_user_level = db('level')->where('id='.$p_user['level_id'])->find();
+                // 上级成本价 == 用户所使用的充值货款 / 用户的拿货折扣 * 上级的拿货折扣
+                $shipment_money = $gm_money / $user_level['discount'] * $p_user_level['discount'];
+                // 判断上级货款是否充足
+                if($p_user['goods_payment'] - $shipment_money < 0) {
+                    // 站内信：上级
+                    $message_template = db('message_template')->where('id=20')->find();
+                    $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                    $content2 = str_replace('money', $shipment_money, $content1);
+                    $Common->ins_message($p_user['id'], $message_template['message_title'], $content2);
+                    
+                    Db::rollback();
+                    $this->error('上级货款不足', null, -7);
+                }else{
+                    // 预扣除上级用户货款，当推荐人不是走货上级时，给推荐人返利
+                    
+                    // $Common->ins_money_log($p_user['id'], 2, 2, $shipment_money, '货款', '下级提货预扣货款');
+                    // 站内信：上级 您的代理【nickname】将要提货【money】元，货款已扣除。
+                    $message_template = db('message_template')->where('id=21')->find();
+                    $content1 = str_replace('nick_name', $user['real_name'], $message_template['message_content']);
+                    $content2 = str_replace('money', $shipment_money, $content1);
+                    $Common->ins_message($p_user['id'], $message_template['message_title'], $content2);
+                    if($user['inviter_id'] != $user['superior_id']){
+                        // 上级利润 = 提货金额 - 上级成本价 - 给推荐人的返利
+                        $profit = $gm_money - $shipment_money - $back_money;
+                        $data = array();
+                        $data['user_id'] = $user_id;    //提货用户ID
+                        $data['p_user_id'] = $p_user['id']; //上级ID
+                        $data['inviter_id'] = $user['inviter_id'];  //推荐人ID
+                        $data['money'] = $gm_money; //提货金额(为提货用户使用的充值货款)
+                        $data['shipment_money'] = $shipment_money;  //上级成本价
+                        $data['profit'] = $profit;  //上级利润(已扣除给原上级的返利)
+                        $data['back_money'] = $back_money;  //推荐人得到的返利(当推荐人不是走货上级的时候)
+                        $data['status'] = 0;
+                        $data['createtime'] = time();
+                        $id = db('user_agent_back_money')->insertGetId($data);
+                        array_push($array, $id);
+                    }else{
+                        // 上级利润 = 提货金额 - 上级成本价
+                        $profit = $gm_money - $shipment_money;
+                        // 如果是同一人 ，不用给推荐人返利
+                        // 上级利润 = 提货金额 - 上级成本价
+                        $data = array();
+                        $data['user_id'] = $user_id;    //提货用户ID
+                        $data['p_user_id'] = $p_user['id']; //上级ID
+                        // $data['inviter_id'] = $user['inviter_id'];  //推荐人ID
+                        $data['money'] = $gm_money; //提货金额(为提货用户使用的充值货款)
+                        $data['shipment_money'] = $shipment_money;  //上级成本价
+                        $data['profit'] = $profit;  //上级利润
+                        // $data['back_money'] = $back_money;  //推荐人得到的返利(当推荐人不是走货上级的时候)
+                        $data['status'] = 0;
+                        $data['createtime'] = time();
+                        $id = db('user_agent_back_money')->insertGetId($data);
+                        array_push($array, $id);
+                    }
+                    $array = $this->parent_goods_payment($p_user['id'],$shipment_money,$Common,$array);
+                }
+            }else{
+                // 如果当前用户没有上级，给推荐人返利
+                $data = array();
+                $data['user_id'] = $user_id;    //提货用户ID
+                // $data['p_user_id'] = $p_user['id']; //上级ID
+                $data['inviter_id'] = $user['inviter_id'];  //推荐人ID
+                $data['money'] = $gm_money; //提货金额(为提货用户使用的充值货款)
+                // $data['shipment_money'] = $shipment_money;  //上级成本价
+                // $data['profit'] = $profit;  //上级利润(已扣除给原上级的返利)
+                $data['back_money'] = $back_money;  //推荐人得到的返利(当推荐人不是走货上级的时候)
+                $data['status'] = 0;
+                $data['createtime'] = time();
+                $id = db('user_agent_back_money')->insertGetId($data);
+                array_push($array, $id);
+            }
+        }
+        return $array;
+    }
 
 
 

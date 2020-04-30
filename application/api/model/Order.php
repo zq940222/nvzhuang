@@ -26,7 +26,11 @@ class Order extends Model
         ->where('id='.$refund_order['user_id'])
         ->find();
         // 下单用户货款返回钱包
-        $recharge_goods_money = $refund_order['order_price'] - $order['gm_money'];
+        if($refund_order['order_price'] > $order['gm_money']){
+            $recharge_goods_money = $order['gm_money'];
+        }else{
+            $recharge_goods_money = $refund_order['order_price'];
+        }
         db('user')
         ->where('id='.$refund_order['user_id'])
         ->setInc('goods_payment', $refund_order['order_price']);
@@ -43,25 +47,27 @@ class Order extends Model
         if(!empty($user_back_money)){
             foreach ($user_back_money as $key => $value) {
                 if($user_back_money[$key]['p_user_id'] > 0){
+                    // key+1是当前用户的上级所使用的充值货款记录
+                    db('user')
+                    ->where('id='.$user_back_money[$key]['p_user_id'])
+                    ->setInc('goods_payment', $user_back_money[$key]['shipment_money']);
                     if(isset($user_back_money[$key+1])){
-                        // key+1是当前用户的上级所使用的充值货款记录
-                        db('user')
-                        ->where('id='.$user_back_money[$key]['p_user_id'])
-                        ->setInc('goods_payment', $user_back_money[$key]['money']);
                         db('user')
                         ->where('id='.$user_back_money[$key]['p_user_id'])
                         ->setInc('recharge_goods_money', $user_back_money[$key+1]['money']);
-                        db('user')
-                        ->where('id='.$user_back_money[$key]['p_user_id'])
-                        ->setDec('lock_goods_money', $user_back_money[$key]['money']);
-                        $Common->ins_money_log($user_back_money[$key]['p_user_id'], 2, 1, $refund_order['order_price'], '货款', '代理退货成功，预扣货款退回');
-                        // 站内信：下单用户。
-                        $message_template = db('message_template')->where('id=23')->find();
-                        $content1 = str_replace('money', $user_back_money[$key]['money'], $message_template['message_content']);
-                        $content = str_replace('nick_name', $user['real_name'], $content1);
-                        $Common->ins_message($user_back_money[$key]['p_user_id'], $message_template['message_title'], $content);
                     }
+                    db('user')
+                    ->where('id='.$user_back_money[$key]['p_user_id'])
+                    ->setDec('lock_goods_money', $user_back_money[$key]['shipment_money']);
+                    $Common->ins_money_log($user_back_money[$key]['p_user_id'], 2, 1, $refund_order['order_price'], '货款', '代理退货成功，预扣货款退回');
+                    // 站内信：下单用户。
+                    $message_template = db('message_template')->where('id=23')->find();
+                    $content1 = str_replace('money', $user_back_money[$key]['money'], $message_template['message_content']);
+                    $content = str_replace('nick_name', $user['real_name'], $content1);
+                    $Common->ins_message($user_back_money[$key]['p_user_id'], $message_template['message_title'], $content);
                 }
+                db('user_back_money')->where('id='.$value['id'])->setField("status",-1);
+                db('user_back_money')->where('id='.$value['id'])->setField("updatetime",time());
             }
         }
         // 改变订单状态

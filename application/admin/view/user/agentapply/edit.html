@@ -3,43 +3,43 @@
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Superior_id')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-superior_id" data-rule="required" data-source="superior/index" class="form-control selectpage" name="row[superior_id]" type="text" value="{$row.superior_id|htmlentities}">
+            <input id="c-superior_id" data-rule="required" data-source="superior/index" class="form-control selectpage" name="row[superior_id]" type="text" disabled value="{$row.superior_id|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Agency_id')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-agency_id" data-rule="required" data-source="agency/index" class="form-control selectpage" name="row[agency_id]" type="text" value="{$row.agency_id|htmlentities}">
+            <input id="c-agency_id" data-rule="required" data-source="agency/index" class="form-control selectpage" name="row[agency_id]" type="text" disabled value="{$row.agency_id|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Name')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-name" data-rule="required" class="form-control" name="row[name]" type="text" value="{$row.name|htmlentities}">
+            <input id="c-name" data-rule="required" class="form-control" name="row[name]" type="text" disabled value="{$row.name|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Mobile')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-mobile" data-rule="required" class="form-control" name="row[mobile]" type="text" value="{$row.mobile|htmlentities}">
+            <input id="c-mobile" data-rule="required" class="form-control" name="row[mobile]" type="text" disabled value="{$row.mobile|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Password')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-password" data-rule="required" class="form-control" name="row[password]" type="text" value="{$row.password|htmlentities}">
+            <input id="c-password" data-rule="required" class="form-control" name="row[password]" type="text" disabled value="{$row.password|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Wx')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-wx" data-rule="required" class="form-control" name="row[wx]" type="text" value="{$row.wx|htmlentities}">
+            <input id="c-wx" data-rule="required" class="form-control" name="row[wx]" type="text" disabled value="{$row.wx|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Id_card')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-id_card" data-rule="required" class="form-control" name="row[id_card]" type="text" value="{$row.id_card|htmlentities}">
+            <input id="c-id_card" data-rule="required" class="form-control" name="row[id_card]" type="text" disabled value="{$row.id_card|htmlentities}">
         </div>
     </div>
     <div class="form-group">
@@ -57,20 +57,20 @@
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Bank_account')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-bank_account" data-rule="required" class="form-control" name="row[bank_account]" type="text" value="{$row.bank_account|htmlentities}">
+            <input id="c-bank_account" data-rule="required" class="form-control" name="row[bank_account]" type="text" disabled value="{$row.bank_account|htmlentities}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Pay_time')}:</label>
         <div class="col-xs-12 col-sm-8">
-            <input id="c-pay_time" class="form-control datetimepicker" data-date-format="YYYY-MM-DD" data-use-current="true" name="row[pay_time]" type="text" value="{$row.pay_time}">
+            <input id="c-pay_time" class="form-control datetimepicker" data-date-format="YYYY-MM-DD" data-use-current="true" name="row[pay_time]" type="text" disabled value="{$row.pay_time}">
         </div>
     </div>
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Avatar')}:</label>
         <div class="col-xs-12 col-sm-8">
             <div class="input-group">
-                <input id="c-avatar" data-rule="required" class="form-control" size="50" name="row[avatar]" type="text" value="{$row.avatar|htmlentities}">
+                <input id="c-avatar" data-rule="required" class="form-control" size="50" name="row[avatar]" type="text" disabled value="{$row.avatar|htmlentities}">
                 <div class="input-group-addon no-border no-padding">
                     <span><button type="button" id="plupload-avatar" class="btn btn-danger plupload" data-input-id="c-avatar" data-mimetype="image/gif,image/jpeg,image/png,image/jpg,image/bmp" data-multiple="false" data-preview-id="p-avatar"><i class="fa fa-upload"></i> {:__('Upload')}</button></span>
                     <span><button type="button" id="fachoose-avatar" class="btn btn-primary fachoose" data-input-id="c-avatar" data-mimetype="image/*" data-multiple="false"><i class="fa fa-list"></i> {:__('Choose')}</button></span>
@@ -84,7 +84,7 @@
         <label class="control-label col-xs-12 col-sm-2">{:__('Pay_certificate_images')}:</label>
         <div class="col-xs-12 col-sm-8">
             <div class="input-group">
-                <input id="c-pay_certificate_images" data-rule="required" class="form-control" size="50" name="row[pay_certificate_images]" type="text" value="{$row.pay_certificate_images|htmlentities}">
+                <input id="c-pay_certificate_images" data-rule="required" class="form-control" size="50" name="row[pay_certificate_images]" type="text" disabled value="{$row.pay_certificate_images|htmlentities}">
                 <div class="input-group-addon no-border no-padding">
                     <span><button type="button" id="plupload-pay_certificate_images" class="btn btn-danger plupload" data-input-id="c-pay_certificate_images" data-mimetype="image/gif,image/jpeg,image/png,image/jpg,image/bmp" data-multiple="true" data-preview-id="p-pay_certificate_images"><i class="fa fa-upload"></i> {:__('Upload')}</button></span>
                     <span><button type="button" id="fachoose-pay_certificate_images" class="btn btn-primary fachoose" data-input-id="c-pay_certificate_images" data-mimetype="image/*" data-multiple="true"><i class="fa fa-list"></i> {:__('Choose')}</button></span>
