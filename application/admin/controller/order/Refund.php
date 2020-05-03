@@ -63,8 +63,13 @@ class Refund extends Backend
                 ->select();
 
             $list = collection($list)->toArray();
+            foreach ($list as $key => $value) {
+                $list[$key]['goods'] = db('order_goods a')
+                ->join('spec_goods_price b','a.item_id=b.id')
+                ->where('a.id='.$list[$key]['order_goods_id'])
+                ->find();
+            }
             $result = array("total" => $total, "rows" => $list);
-
             return json($result);
         }
         return $this->view->fetch();
@@ -108,9 +113,9 @@ class Refund extends Backend
             }
             $this->success();
         }else{
-            $order->goods = db('order_goods')
-            ->field('goods_sn,goods_name as name,goods_num')
-            ->where('id='.$order->order_goods_id)
+            $order->goods = db('order_goods a')
+            ->join('spec_goods_price b','a.item_id=b.id')
+            ->where('a.id='.$order->order_goods_id)
             ->find();
         }
         $this->assign('order', $order);

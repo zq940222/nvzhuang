@@ -46,6 +46,18 @@ class Order extends Backend
         if(empty($order)){
             $this->error('订单不存在或已被删除');
         }
+        if(!empty($order['order_goods'])){
+            $order_goods = db('order_goods')
+            ->where('order_id='.$order['id'])
+            ->select();
+            foreach ($order_goods as $key => $value) {
+                $spec_image = db('spec_goods_price')
+                ->where('id='.$order_goods[$key]['item_id'])
+                ->value('spec_image');
+                $order_goods[$key]['spec_image'] = $spec_image;
+            }
+        }
+        $order->orderGoods = $order_goods;
         $this->assign('order', $order);
         return $this->fetch();
     }

@@ -15,10 +15,7 @@ return array (
   'fixedpage' => 'dashboard',
   'categorytype' => 
   array (
-    'style' => '款式',
-    'brand' => '品牌',
-    'activity' => '活动',
-    'price' => '价格',
+    'cate' => '分类',
   ),
   'configgroup' => 
   array (
@@ -27,6 +24,7 @@ return array (
     'user' => 'User',
     'pay' => '打款配置',
     'refund' => '退货配置',
+    'service' => '客服',
   ),
   'mail_type' => '1',
   'mail_smtp_host' => 'smtp.qq.com',
@@ -47,4 +45,5 @@ return array (
   'refund_consignee' => '马云',
   'refund_mobile' => '123456',
   'award' => '0',
+  'service' => '<p>QQ：123456</p><p>微信：123456</p><p>电话：123456</p>',
 );

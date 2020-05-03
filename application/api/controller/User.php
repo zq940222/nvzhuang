@@ -35,13 +35,13 @@ class User extends Api
         $user['level_name'] = db('level')->where('id='.$user['level_id'])->value('nickname');
         if($user['superior_id'] > 0){
             $superior = db('user')->where('id='.$user['superior_id'])->find();
-            $user['superior_mobile'] = $superior['mobile'];
+            $user['superior_mobile'] = $superior['mobile'].'('.$superior['real_name'].')';
         }else{
             $user['superior_mobile'] = '';
         }
         if($user['inviter_id'] > 0){
             $inviter = db('user')->where('id='.$user['inviter_id'])->find();
-            $user['inviter_mobile'] = $inviter['mobile'];
+            $user['inviter_mobile'] = $inviter['mobile'].'('.$inviter['real_name'].')';
         }else{
             $user['inviter_mobile'] = '';
         }
@@ -75,19 +75,22 @@ class User extends Api
         if($user_id == -1) {
             $parent_info['nickname'] = $pay_info['company_name'];
             $parent_info['mobile'] = $pay_info['company_phone'];
+            $level_info = db('level')
+            ->select();
         }else{
             $parent_info = db('user')
             ->field('nickname,mobile')
             ->where('id='.$user_id)
             ->find();
+            $user = db('user')->where('id='.$user_id)->find();
+            $level_info = db('level')
+            ->where('id>='.$user['level_id'])
+            ->select();
         }
         unset($pay_info['company_address']);
         unset($pay_info['company_phone']);
         unset($pay_info['company_name']);
-        $user = db('user')->where('id='.$user_id)->find();
-        $level_info = db('level')
-        ->where('id>='.$user['level_id'])
-        ->select();
+        
         
         $data['pay_info'] = $pay_info;
         $data['parent_info'] = $parent_info;
@@ -118,7 +121,7 @@ class User extends Api
     public function apply_agent()
     {
         $superior_id = $this->request->request('superior_id');
-        if($superior_id == 1) $superior_id = 0;
+        if($superior_id == -1) $superior_id = 0;
         if(!empty($superior_id)){
             $data['inviter_id'] = $superior_id;
         }
@@ -1124,7 +1127,7 @@ class User extends Api
         if(!$user_id) {
             $this->error(__('无效的参数'), null, -1);
         }
-        $url = 'http://demo02.asdeee.com/Applyagent.html';
+        $url = 'http://'.$_SERVER['HTTP_HOST'].'/shop/Applyagent.html';
 
         $user = db('user')->where('id='.$user_id)->find();
         if(empty($user)){

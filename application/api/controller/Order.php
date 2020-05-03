@@ -135,11 +135,11 @@ class Order extends Api
         }
         //订单总额
         $arr['goods_data'] = $goods;
-        $arr['goods_price'] = $goods_price;
+        $arr['goods_price'] = number_format($goods_price, 2);
         $arr['shipping_price'] = $shipping_price;
         $arr['goods_payment'] = $user['goods_payment'];
         $arr['total_num'] = $total_num;
-        $arr['total_amount'] = $goods_price + $shipping_price;
+        $arr['total_amount'] = number_format($goods_price + $shipping_price, 2);
         
         $this->success('请求成功', $arr);
         
@@ -214,11 +214,11 @@ class Order extends Api
 
         //订单总额
         $data['goods_data'] = $goods;
-        $data['goods_price'] = $goods_price;
+        $data['goods_price'] = number_format($goods_price, 2);
         $data['shipping_price'] = $shipping_price;
         $data['goods_payment'] = $user['goods_payment'];
         $data['total_num'] = $total_num;
-        $data['total_amount'] = $goods_price + $shipping_price;
+        $data['total_amount'] = number_format($goods_price + $shipping_price, 2);
         
         $this->success('请求成功', $data);
 
@@ -302,6 +302,8 @@ class Order extends Api
         //计算订单总价
         Db::startTrans();
         $Common = new Common;
+        // dump($gdata);
+        $goods_data = [];
         foreach ($gdata as $key => $value) {
             if($gdata[$key]['num'] > 1){
                 for ($i=0; $i < $gdata[$key]['num']; $i++) { 
@@ -311,6 +313,8 @@ class Order extends Api
                     $goodsdata['price']    = $gdata[$key]['price'];
                     $goods_data[] = $goodsdata;
                 }
+            }else{
+                $goods_data[] = $gdata[$key];
             }
         }
         // dump($goods_data);die;
@@ -480,7 +484,7 @@ class Order extends Api
         }
         // 提交事务
         Db::commit();
-        $this->error('下单成功', $order['order_sn'], 1);
+        $this->error('下单成功', $order_sn_unique, 1);
     }
 
     // 递归扣除一条线上每个用户的直属上级货款

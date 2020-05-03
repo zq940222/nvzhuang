@@ -434,12 +434,23 @@ define(['jquery', 'bootstrap', 'moment', 'moment/locale/zh-cn', 'bootstrap-table
                 image: {
                     'click .img-center': function (e, value, row, index) {
                         var data = [];
-                        value = value.split(",");
-                        $.each(value, function (index, value) {
-                            data.push({
-                                src: Fast.api.cdnurl(value),
+                        if(value){
+                            value = value.split(",");
+                            $.each(value, function (index, value) {
+                                data.push({
+                                    src: Fast.api.cdnurl(value),
+                                });
                             });
-                        });
+                        }else{
+                            value = row.goods.spec_image;
+                            value = value.split(",");
+                            $.each(value, function (index, value) {
+                                data.push({
+                                    src: Fast.api.cdnurl(value),
+                                });
+                            });
+                        }
+                        
                         Layer.photos({
                             photos: {
                                 "start": $(this).parent().index(),

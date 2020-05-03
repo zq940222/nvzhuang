@@ -199,33 +199,45 @@ class Goods extends Api
      */
     public function cate_list()
     {
-        $data = array();
-        $site = Config::get('site.categorytype');
-        ksort($site);
-        foreach ($site as $key => $value) {
-            $cate = array();
-            $cat_name = $value;
-            $cat_data = db('category')
-            ->field('id as '.$key.'_id,name')
-            ->where('pid=0 and type="'.$key.'"')
+        $data = db('category')
+        ->field('id,pid,name,nickname,image')
+        ->where('pid=0')
+        ->order('weigh','asc')
+        ->select();
+        foreach ($data as $key => $value) {
+            $data[$key]['child'] = db('category')
+            ->field('id,pid,name,nickname,image')
+            ->where('status="normal" and pid='.$data[$key]['id'])
             ->order('weigh','asc')
             ->select();
-            if($key == 'style') {
-                foreach ($cat_data as $keys => $values) {
-                    $cat_data[$keys]['child'] = db('category')
-                    ->field('id as '.$key.'_id,name')
-                    ->where('pid='.$cat_data[$keys][$key.'_id'].' and type="'.$key.'"')
-                    ->order('weigh','asc')
-                    ->select();
-                }
-            }
-            if(!empty($cat_data)) {
-                $cate['cat_name'] = $cat_name;
-                $cate['cat_data'] = $cat_data;
-                $data[] = $cate;
-            }
-            
         }
+        // $data = array();
+        // $site = Config::get('site.categorytype');
+        // ksort($site);
+        // foreach ($site as $key => $value) {
+        //     $cate = array();
+        //     $cat_name = $value;
+        //     $cat_data = db('category')
+        //     ->field('id as '.$key.'_id,name')
+        //     ->where('pid=0 and type="'.$key.'"')
+        //     ->order('weigh','asc')
+        //     ->select();
+        //     if($key == 'style') {
+        //         foreach ($cat_data as $keys => $values) {
+        //             $cat_data[$keys]['child'] = db('category')
+        //             ->field('id as '.$key.'_id,name')
+        //             ->where('pid='.$cat_data[$keys][$key.'_id'].' and type="'.$key.'"')
+        //             ->order('weigh','asc')
+        //             ->select();
+        //         }
+        //     }
+        //     if(!empty($cat_data)) {
+        //         $cate['cat_name'] = $cat_name;
+        //         $cate['cat_data'] = $cat_data;
+        //         $data[] = $cate;
+        //     }
+            
+        // }
         $this->success('请求成功', $data);
     }
 
