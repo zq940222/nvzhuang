@@ -1,7 +1,49 @@
+<div class="ncap-order-details">
+    <div class="tabs-panels">
+        <div class="misc-info">
+            <h3>基本信息</h3>
+            <table class="table table-striped table-bordered table-hover table-nowrap">
+                <tr>
+                    <td>用户ID：</td>
+                    <td>{$row.user_id}</td>
+                </tr>
+                <tr>
+                    <td>用户名：</td>
+                    <td>{$row.user.real_name}</td>
+                </tr>
+                <tr>
+                    <td>银行名称：</td>
+                    <td>{$row.bank_name}</td>
+                </tr>
+                <tr>
+                    <td>支行名称：</td>
+                    <td>{$row.branch_name}</td>
+                </tr>
+                <tr>
+                    <td>开户姓名：</td>
+                    <td>{$row.name}</td>
+                </tr>
+                <tr>
+                    <td>银行卡号：</td>
+                    <td>{$row.bank_account}</td>
+                </tr>
+                <tr>
+                    <td>提现金额：</td>
+                    <td>{$row.money}</td>
+                </tr>
+                <tr>
+                    <td>创建时间：</td>
+                    <td>{$row.createtime}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
 <form id="audit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
 
     <div class="form-group">
-        <label class="control-label col-xs-12 col-sm-2">{:__('Status')}:</label>
+        <label class="control-label col-xs-12 col-sm-2">{:__('Status')}</label>
         <div class="col-xs-12 col-sm-8">
             
             <div class="radio">

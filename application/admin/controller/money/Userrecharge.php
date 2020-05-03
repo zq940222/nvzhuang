@@ -60,7 +60,6 @@ class Userrecharge extends Backend
                     // $result = $row->allowField(true)->save($params);
                     $model = new User();
                     if ($params['status'] == 1){
-                        
                         $res = $model->recharge_apply_success($ids);
                         if($res['code'] == 1){
                             $result = true;
@@ -95,6 +94,8 @@ class Userrecharge extends Backend
             }
             $this->error(__('Parameter %s can not be empty', ''));
         }
+        $user = db('user')->where('id='.$row['user_id'])->find();
+        $row['user'] = $user;
         $this->view->assign("row", $row);
         return $this->view->fetch();
     }

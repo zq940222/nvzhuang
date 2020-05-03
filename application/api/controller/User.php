@@ -280,8 +280,8 @@ class User extends Api
         $data['new_superior_id'] = 0;
         // 当原上级ID存在时
         Db::startTrans();
+        $Common = new Common;
         if($data['superior_id'] > 0){
-            $Common = new Common;
             // 如果用户要升级的等级不是一级，判断原上级代理等级是否高于用户要升级的等级，如果相等或高于，那么用户的新走火上级为原上级的上级;如果是一级那么走货方为平台，不进行任何操作
             if($data['level'] != 1) {
                 $p_user = db('user')->where('id='.$data['superior_id'])->find();

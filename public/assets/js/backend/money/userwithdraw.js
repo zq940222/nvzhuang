@@ -7,8 +7,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                 extend: {
                     index_url: 'money/userwithdraw/index' + location.search,
                     add_url: 'money/userwithdraw/add',
-                    edit_url: 'money/userwithdraw/edit',
-                    del_url: 'money/userwithdraw/del',
+                    // edit_url: 'money/userwithdraw/edit',
+                    // del_url: 'money/userwithdraw/del',
                     multi_url: 'money/userwithdraw/multi',
                     table: 'user_withdraw',
                 }
@@ -41,6 +41,15 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                                     classname: 'btn btn-xs btn-primary btn-dialog',
                                     icon: 'fa fa-list',
                                     url: 'money/userwithdraw/audit',
+                                    visible: function (row) {
+                                        //返回true时按钮显示,返回false隐藏
+                                        if (row.status == 0)
+                                        {
+                                            return true;
+                                        }else {
+                                            return false;
+                                        }
+                                    },
                                     callback: function (data) {
                                         Layer.alert("接收到回传数据：" + JSON.stringify(data), {title: "回传数据"});
                                     }

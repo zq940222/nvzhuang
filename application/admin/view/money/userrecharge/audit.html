@@ -1,15 +1,64 @@
-<form id="audit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
+<div class="ncap-order-details">
+    <div class="tabs-panels">
+        <div class="misc-info">
+            <h3>基本信息</h3>
+            <table class="table table-striped table-bordered table-hover table-nowrap">
+                <tr>
+                    <td>用户ID：</td>
+                    <td>{$row.user_id}</td>
+                </tr>
+                <tr>
+                    <td>用户名：</td>
+                    <td>{$row.user.real_name}</td>
+                </tr>
+                <tr>
+                    <td>打款方式：</td>
+                    <td>
+                        {if condition="$row.pay_type==1"}
+                        支付宝
+                        {else/}
+                        银行转账
+                        {/if}
+                    </td>
+                </tr>
+                <tr>
+                    <td>打款帐号：</td>
+                    <td>{$row.bank_account}</td>
+                </tr>
+                <tr>
+                    <td>充值金额：</td>
+                    <td>{$row.money}</td>
+                </tr>
+                <tr>
+                    <td>日期：</td>
+                    <td>{$row.recharge_time}</td>
+                </tr>
+                <tr>
+                    <td>打款凭证：</td>
+                    <td>
+                        <a href="{$row.pay_certificate_images}" target="view_window">
+                            <img class="img-sm img-center" src="{$row.pay_certificate_images}">
+                        </a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>备注：</td>
+                    <td>{$row.remake}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
 
+<form id="audit-form" class="form-horizontal" role="form" data-toggle="validator" method="POST" action="">
     <div class="form-group">
         <label class="control-label col-xs-12 col-sm-2">{:__('Status')}:</label>
         <div class="col-xs-12 col-sm-8">
-            
             <div class="radio">
             {foreach name="statusList" item="vo"}
             <label for="row[status]-{$key}"><input id="row[status]-{$key}" name="row[status]" type="radio" value="{$key}" {in name="key" value="$row.status"}checked{/in} /> {$vo}</label> 
             {/foreach}
             </div>
-
         </div>
     </div>
     <div class="form-group layer-footer">

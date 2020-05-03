@@ -94,6 +94,9 @@ class Userwithdraw extends Backend
             }
             $this->error(__('Parameter %s can not be empty', ''));
         }
+        $user = db('user')->where('id='.$row['user_id'])->find();
+        $row['user'] = $user;
+        $row['createtime'] = date('Y-m-d H:i:s',$row['createtime']);
         $this->view->assign("row", $row);
         return $this->view->fetch();
     }
