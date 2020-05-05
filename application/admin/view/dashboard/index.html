@@ -160,7 +160,7 @@
         {:build_heading(null, false)}
         <ul class="nav nav-tabs">
             <li class="active"><a href="#one" data-toggle="tab">{:__('Dashboard')}</a></li>
-            <li><a href="#two" data-toggle="tab">{:__('Custom')}</a></li>
+            <!-- <li><a href="#two" data-toggle="tab">{:__('Custom')}</a></li> -->
         </ul>
     </div>
     <div class="panel-body">
@@ -177,7 +177,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-3 col-xs-6">
+                    <!-- <div class="col-sm-3 col-xs-6">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-violet"><i class="fa fa-book"></i></span>
                             <div class="sm-st-info">
@@ -185,7 +185,7 @@
                                 {:__('Total view')}
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                     <div class="col-sm-3 col-xs-6">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-blue"><i class="fa fa-shopping-bag"></i></span>
@@ -195,12 +195,21 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-sm-3 col-xs-6">
+                    <!-- <div class="col-sm-3 col-xs-6">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-green"><i class="fa fa-cny"></i></span>
                             <div class="sm-st-info">
                                 <span>{$totalorderamount}</span>
                                 {:__('Total order amount')}
+                            </div>
+                        </div>
+                    </div> -->
+                    <div class="col-sm-3 col-xs-6">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-green"><i class="fa fa-cny"></i></span>
+                            <div class="sm-st-info">
+                                <span>{$totalrefundorder}</span>
+                                {:__('总退单数')}
                             </div>
                         </div>
                     </div>
@@ -217,14 +226,24 @@
                                     <div class="col-xs-6 stat-col">
                                         <div class="stat-icon"><i class="fa fa-rocket"></i></div>
                                         <div class="stat">
-                                            <div class="value"> {$todayusersignup}</div>
-                                            <div class="name"> {:__('Today user signup')}</div>
+                                            <div class="value"> {$todayagentapply}</div>
+                                            <div class="name"> {:__('今日注册')}</div>
                                         </div>
                                         <div class="progress">
                                             <div class="progress-bar progress-bar-success" style="width: 30%"></div>
                                         </div>
                                     </div>
                                     <div class="col-xs-6 stat-col">
+                                        <div class="stat-icon"><i class="fa fa-rocket"></i></div>
+                                        <div class="stat">
+                                            <div class="value"> {$todayagentupgrade}</div>
+                                            <div class="name"> {:__('今日升级')}</div>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-success" style="width: 30%"></div>
+                                        </div>
+                                    </div>
+                                    <!-- <div class="col-xs-6 stat-col">
                                         <div class="stat-icon"><i class="fa fa-shopping-cart"></i></div>
                                         <div class="stat">
                                             <div class="value"> {$todayuserlogin}</div>
@@ -233,12 +252,32 @@
                                         <div class="progress">
                                             <div class="progress-bar progress-bar-success" style="width: 25%"></div>
                                         </div>
-                                    </div>
+                                    </div> -->
                                     <div class="col-xs-6  stat-col">
                                         <div class="stat-icon"><i class="fa fa-line-chart"></i></div>
                                         <div class="stat">
                                             <div class="value"> {$todayorder}</div>
                                             <div class="name"> {:__('Today order')}</div>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-success" style="width: 25%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-6  stat-col">
+                                        <div class="stat-icon"><i class="fa fa-users"></i></div>
+                                        <div class="stat">
+                                            <div class="value"> {$unsettleorder}</div>
+                                            <div class="name"> {:__('待处理订单')}</div>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar progress-bar-success" style="width: 25%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-6  stat-col">
+                                        <div class="stat-icon"><i class="fa fa-line-chart"></i></div>
+                                        <div class="stat">
+                                            <div class="value"> {$todayrefundorder}</div>
+                                            <div class="name"> {:__('今日退单')}</div>
                                         </div>
                                         <div class="progress">
                                             <div class="progress-bar progress-bar-success" style="width: 25%"></div>
@@ -254,7 +293,7 @@
                                             <div class="progress-bar progress-bar-success" style="width: 25%"></div>
                                         </div>
                                     </div>
-                                    <div class="col-xs-6  stat-col">
+                                    <!-- <div class="col-xs-6  stat-col">
                                         <div class="stat-icon"><i class="fa fa-list-alt"></i></div>
                                         <div class="stat">
                                             <div class="value"> {$sevendnu}</div>
@@ -263,8 +302,8 @@
                                         <div class="progress">
                                             <div class="progress-bar progress-bar-success" style="width: 25%"></div>
                                         </div>
-                                    </div>
-                                    <div class="col-xs-6 stat-col">
+                                    </div> -->
+                                    <!-- <div class="col-xs-6 stat-col">
                                         <div class="stat-icon"><i class="fa fa-dollar"></i></div>
                                         <div class="stat">
                                             <div class="value"> {$sevendau}</div>
@@ -273,14 +312,14 @@
                                         <div class="progress">
                                             <div class="progress-bar progress-bar-success" style="width: 25%"></div>
                                         </div>
-                                    </div>
+                                    </div> -->
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row" style="margin-top:15px;">
+                <!-- <div class="row" style="margin-top:15px;">
 
                     <div class="col-lg-12">
                     </div>
@@ -369,9 +408,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
-                <div class="row">
+<!--                 <div class="row">
                     <div class="col-lg-4">
                         <div class="box box-danger">
                             <div class="box-header with-border">
@@ -486,7 +525,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
             <div class="tab-pane fade" id="two">
                 <div class="row">

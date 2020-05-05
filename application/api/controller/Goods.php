@@ -35,6 +35,7 @@ class Goods extends Api
      * @param int $brand_id  品牌ID
      * @param int $style_id  款式ID
      * @param int $activity_id  活动ID
+     * @param int $cate_id  活动ID
      * @param string $price_interval  价格区间
      * @param string $search  搜索
      */
@@ -46,9 +47,10 @@ class Goods extends Api
         $is_new = $this->request->request('is_new');
         $sentiment = $this->request->request('sentiment');
         $price = $this->request->request('price');
-        $brand_id = $this->request->request('brand_id');
-        $style_id = $this->request->request('style_id');
-        $activity_id = $this->request->request('activity_id');
+        // $brand_id = $this->request->request('brand_id');
+        // $style_id = $this->request->request('style_id');
+        // $activity_id = $this->request->request('activity_id');
+        $cate_id = $this->request->request('cate_id');
         $price_interval = $this->request->request('price_interval');
         $search = $this->request->request('search');
 
@@ -74,11 +76,19 @@ class Goods extends Api
 
         if(!empty($price)) $order['price'.$level] = $price;
 
-        if(!empty($brand_id)) $where .= ' and brand_id='.$brand_id;
+        // if(!empty($brand_id)) $where .= ' and brand_id='.$brand_id;
 
-        if(!empty($style_id)) $where .= ' and style_id='.$style_id;
+        // if(!empty($style_id)) $where .= ' and style_id='.$style_id;
 
-        if(!empty($activity_id)) $where .= ' and activity_id='.$activity_id;
+        // if(!empty($activity_id)) $where .= ' and activity_id='.$activity_id;
+
+        if(!empty($cate_id)) {
+            $cate_id_arr = explode(',', $cate_id);
+            foreach ($cate_id_arr as $key => $value) {
+                $where_arr[$key] = " (cate_id LIKE '".$value."' OR cate_id LIKE '".$value.",%' OR cate_id LIKE '%,".$value.",%' OR cate_id LIKE '%,".$value."') ";
+            }
+            $where .= ' and ('.implode(' or ', $where_arr).')';
+        }
 
         if(!empty($price_interval)) $where .= ' and price'.$level.' between '.explode('-', $price_interval)[0].' and '.explode('-', $price_interval)[1];
 
@@ -119,6 +129,8 @@ class Goods extends Api
         if (!$user_id) {
             $this->error(__('用户ID不能为空'), null, -1);
         }
+
+        db('goods')->where('id='.$goods_id)->setInc('click_count', 1);
 
         $level = db('user')->where('id='.$user_id)->value('level_id');
 
@@ -201,7 +213,7 @@ class Goods extends Api
     {
         $data = db('category')
         ->field('id,pid,name,nickname,image')
-        ->where('pid=0')
+        ->where('status="normal" and pid=0')
         ->order('weigh','asc')
         ->select();
         foreach ($data as $key => $value) {
