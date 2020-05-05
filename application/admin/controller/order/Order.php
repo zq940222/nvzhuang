@@ -38,6 +38,46 @@ class Order extends Backend
      */
 
     /**
+     * 查看
+     */
+    public function index()
+    {
+        //设置过滤方法
+        $this->request->filter(['strip_tags']);
+        if ($this->request->isAjax()) {
+            //如果发送的来源是Selectpage，则转发到Selectpage
+            if ($this->request->request('keyField')) {
+                return $this->selectpage();
+            }
+            list($where, $sort, $order, $offset, $limit) = $this->buildparams();
+            $total = $this->model
+                ->where($where)
+                ->order($sort, $order)
+                ->count();
+
+            $list = $this->model
+                ->where($where)
+                ->order($sort, $order)
+                ->limit($offset, $limit)
+                ->select();
+
+            $list = collection($list)->toArray();
+            foreach ($list as $key => $value) {
+                $list[$key]['users'] = db('user')
+                ->where('id='.$list[$key]['user_id'])
+                ->find();
+                $list[$key]['goods'] = db('order_goods a')
+                ->join('spec_goods_price b','a.item_id=b.id')
+                ->where('a.order_id='.$list[$key]['id'])
+                ->find();
+            }
+            $result = array("total" => $total, "rows" => $list);
+            return json($result);
+        }
+        return $this->view->fetch();
+    }
+
+    /**
      * 订单详情
      * @return mixed
      */
