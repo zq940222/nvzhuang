@@ -84,7 +84,7 @@ class Goods extends Api
         // if(!empty($activity_id)) $where .= ' and activity_id='.$activity_id;
 
         if(!empty($cate_id)) {
-            $where .= " (cate_id LIKE '".$cate_id."' OR cate_id LIKE '".$cate_id.",%' OR cate_id LIKE '%,".$cate_id.",%' OR cate_id LIKE '%,".$cate_id."') ";
+            $where .= " and (cate_id LIKE '".$cate_id."' OR cate_id LIKE '".$cate_id.",%' OR cate_id LIKE '%,".$cate_id.",%' OR cate_id LIKE '%,".$cate_id."') ";
 
             // $cate_id_arr = explode(',', $cate_id);
             // foreach ($cate_id_arr as $key => $value) {
