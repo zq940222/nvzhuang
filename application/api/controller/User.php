@@ -966,6 +966,10 @@ class User extends Api
         $Order = new Order;
         // dump('当前用户:');
         $data['header'] = $Order->get_order_header($user_id, $date);
+        $data['header']['bounty'] = round($data['header']['bounty'], 2);
+        $data['header']['profit'] = round($data['header']['profit'], 2);
+        $data['header']['team_money'] = round($data['header']['team_money'], 2);
+        $data['header']['total_sales'] = round($data['header']['total_sales'], 2);
         if(!empty($agency_data)){
             $firstday = date('Y-m-01', strtotime($date));
             $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
