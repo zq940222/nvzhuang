@@ -64,4 +64,106 @@ class User extends Backend
         }
         return $this->view->fetch();
     }
+
+    /**
+     * 用户详情
+     * @return mixed
+     */
+    public function detail($ids = null){
+        $user = model('User')->find($ids);
+        if(empty($user)){
+            $this->error('用户不存在或已被删除');
+        }
+        $this->assign('user', $user);
+        return $this->fetch();
+    }
+
+    /**
+     * 退代理
+     * @return mixed
+     */
+    public function refund($id = null){
+        $user = model('User')->find($id);
+        if(empty($user)){
+            $this->error('用户不存在或已被删除');
+        }
+        $superior_id = 0;
+        if($user['superior_id'] > 0){
+            $superior_id = $user['superior_id'];
+        }
+        // 更换推荐人ID
+        db('user')
+        ->where('status="1" and inviter_id='.$id)
+        ->setField('inviter_id', 0);
+        // 更换上级ID
+        db('user')
+        ->where('status="1" and superior_id='.$id)
+        ->setField('superior_id', $superior_id);
+        // 删除等级关系树
+        db('level_tree')
+        ->where('user_id='.$id)
+        ->delete();
+        $level_tree = db('level_tree')->select();
+        foreach ($level_tree as $key => $value) {
+            if(!empty($level_tree[$key]['level_1'])){
+                $level_1 = explode(',', $level_tree[$key]['level_1']);
+                foreach ($level_1 as $k => $v) {
+                    if($level_1[$k] == $id){
+                        unset($level_1[$k]);
+                    }
+                }
+                if(!empty($level_1)){
+                    db('level_tree')
+                    ->where('user_id='.$level_tree[$key]['user_id'])
+                    ->setField('level_1', implode(',', $level_1));
+                }
+            }
+            if(!empty($level_tree[$key]['level_2'])){
+                $level_2 = explode(',', $level_tree[$key]['level_2']);
+                foreach ($level_2 as $k => $v) {
+                    if($level_2[$k] == $id){
+                        unset($level_2[$k]);
+                    }
+                }
+                if(!empty($level_2)){
+                    db('level_tree')
+                    ->where('user_id='.$level_tree[$key]['user_id'])
+                    ->setField('level_2', implode(',', $level_2));
+                }
+            }
+            if(!empty($level_tree[$key]['level_3'])){
+                $level_3 = explode(',', $level_tree[$key]['level_3']);
+                foreach ($level_3 as $k => $v) {
+                    if($level_3[$k] == $id){
+                        unset($level_3[$k]);
+                    }
+                }
+                if(!empty($level_3)){
+                    db('level_tree')
+                    ->where('user_id='.$level_tree[$key]['user_id'])
+                    ->setField('level_3', implode(',', $level_3));
+                }
+            }
+            if(!empty($level_tree[$key]['level_4'])){
+                $level_4 = explode(',', $level_tree[$key]['level_4']);
+                foreach ($level_4 as $k => $v) {
+                    if($level_4[$k] == $id){
+                        unset($level_4[$k]);
+                    }
+                }
+                if(!empty($level_4)){
+                    db('level_tree')
+                    ->where('user_id='.$level_tree[$key]['user_id'])
+                    ->setField('level_4', implode(',', $level_4));
+                }
+            }
+            
+        }
+        // 删除用户
+        db('user')
+        ->where('id='.$id)
+        ->delete();
+        $this->success();
+    }
+
 }
