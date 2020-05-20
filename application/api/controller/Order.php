@@ -269,6 +269,12 @@ class Order extends Api
      */
     public function place_order()
     {
+        // 加锁
+        $Redislock = new Redislock;
+        // 定义锁标识
+        $lock_key = 'place_order';
+        $order_lock = $Redislock->lock($lock_key,5,5);
+
         $data = $_REQUEST;
         //接收数据
         $_data['user_id'] = $user_id = $this->request->request('user_id');
@@ -481,6 +487,23 @@ class Order extends Api
         }
         if(!empty($cart_ids)){
             db('cart')->where('cart_id in ('.$cart_ids.')')->delete();
+        }
+
+        // 同步云仓库存
+        $Store = new Store;
+        foreach ($goods_data as $key => $value) {
+            $group_id = $goods_data[$key]['group_id'];
+            $num = $goods_data[$key]['num'];
+            $spec_goods_price = db('spec_goods_price')->where('id='.$group_id)->find();
+            // 获取云仓库存
+            $Store_data = $Store->synchro($spec_goods_price['sku']);
+            if($Store_data['code'] == 0){
+                if(isset($Store_data['inventorys']) && !empty($Store_data['inventorys'])){
+                    //同步云仓库存
+                    $qty = $Store_data['inventorys'][0]['qty'];
+                    $r = $Store->synchro_goods_num($spec_goods_price['sku'], $qty-$num);
+                }
+            }
         }
         // 提交事务
         Db::commit();

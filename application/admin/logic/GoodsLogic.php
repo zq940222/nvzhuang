@@ -38,7 +38,7 @@ class GoodsLogic extends Model
 
         $spec = model('Spec')->column('id,name'); // 规格表
         $specItem = model('SpecItem')->column('id,item,spec_id');//规格项
-        $keySpecGoodsPrice = model('SpecGoodsPrice')->where('goods_id', '=',$goods_id)->column('key,key_name,tag_price,price,store_count,spec_image');//规格项
+        $keySpecGoodsPrice = model('SpecGoodsPrice')->where('goods_id', '=',$goods_id)->column('key,key_name,tag_price,price,store_count,sku,spec_image');//规格项
 
         $str = "<table width='100px' class='table table-bordered' id='spec_input_tab'>";
         $str .="<tr>";
@@ -50,6 +50,7 @@ class GoodsLogic extends Model
         $str .="<td><b>吊牌价</b></td>
                 <td><b>原价</b></td>
                 <td><b>库存</b></td>
+                <td><b>sku(商品编码)</b></td>
                 <td><b>图片</b></td>
                <td><b>操作</b></td>
              </tr>";
@@ -69,11 +70,13 @@ class GoodsLogic extends Model
                 $keySpecGoodsPrice[$item_key]["tag_price"] = 0;
                 $keySpecGoodsPrice[$item_key]["price"] = 0;
                 $keySpecGoodsPrice[$item_key]["store_count"] = 0;
+                $keySpecGoodsPrice[$item_key]["sku"] = 0;
                 $keySpecGoodsPrice[$item_key]["spec_image"] = '';
             }
             $str .="<td><input type='text' name='row[item][$item_key][tag_price]' value='{$keySpecGoodsPrice[$item_key]["tag_price"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
             $str .="<td><input type='text' name='row[item][$item_key][price]' value='{$keySpecGoodsPrice[$item_key]["price"]}' onkeyup='this.value=this.value.replace(/[^\d.]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d.]/g,\"\")' /></td>";
             $str .="<td><input type='text' name='row[item][$item_key][store_count]' value='{$keySpecGoodsPrice[$item_key]["store_count"]}' onkeyup='this.value=this.value.replace(/[^\d]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d]/g,\"\")' /></td>";
+            $str .="<td><input type='text' name='row[item][$item_key][sku]' value='{$keySpecGoodsPrice[$item_key]["sku"]}' onkeyup='this.value=this.value.replace(/[^\d]/g,\"\")' onpaste='this.value=this.value.replace(/[^\d]/g,\"\")' /></td>";
             $str .="<td><input id='c-image-{$k}' type='hidden' name='row[item][$item_key][spec_image]' value='{$keySpecGoodsPrice[$item_key]["spec_image"]}' />";
             $str .="<span><button type='button' id='plupload-image-{$k}' class='btn btn-danger plupload list-block' data-input-id='c-image-{$k}' data-mimetype='image/gif,image/jpeg,image/png,image/jpg,image/bmp' data-multiple='false' data-preview-id='p-image-{$k}'><i class='fa fa-upload'></i> 上传</button></span>";
             $str .="<ul class='row list-inline plupload-preview' id='p-image-{$k}' ></ul></td>";
