@@ -383,6 +383,7 @@ class Order extends Api
             $order = array();
             $order['user_id'] = $user_id;
             $order['order_sn'] = time().$user_id.mt_rand(1000, 9999);
+            $goods_data[$key]['order_sn'] = $order['order_sn'];
             $order['order_sn_unique'] = $order_sn_unique;
             $order['consignee'] = $user_address['consignee'];
             $order['province_id'] = $user_address['province_id'];
@@ -501,7 +502,7 @@ class Order extends Api
                 if(isset($Store_data['inventorys']) && !empty($Store_data['inventorys'])){
                     //同步云仓库存
                     $qty = $Store_data['inventorys'][0]['qty'];
-                    $r = $Store->synchro_goods_num($spec_goods_price['sku'], $qty-$num);
+                    $r = $Store->inventory_upload($goods_data[$key]['order_sn'],$spec_goods_price['sku'], $qty-$num);
                 }
             }
         }

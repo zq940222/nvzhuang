@@ -57,7 +57,7 @@ class Store extends Api
     }
 
     // 查询库存
-    public function synchro($sku_id)
+    public function synchro($sku_id='66660109')
     {
         $cfg = $this->cfg;
 
@@ -66,7 +66,7 @@ class Store extends Api
         $action = 'inventory.query';
 
         $params = [
-            'wms_co_id' => 0,
+            'wms_co_id' => 10391408,
             'page_index' => 1,
             'page_size' => 30,
             // 'modified_begin' => , //datetime          修改起始时间，和结束时间必须同时存在，时间间隔不能超过七天
@@ -80,12 +80,12 @@ class Store extends Api
         //     'modified_end' => date('Y-m-d H:i:s', strtotime('2019-12-07')), //datetime          修改起始时间，和结束时间必须同时存在，时间间隔不能超过七天
         // ];
         //普通接口调用方式,查询全部店铺信息
-        $response = $service->shops_query($action,$params); 
+        $response = $service->shops_query($action,$params);
         return $response;
     }
 
     // 同步库存
-    public function synchro_goods_num($sku_id, $qty)
+    public function synchro_goods_num($sku_id='66660109', $qty=1)
     {
         $cfg = $this->cfg;
 
@@ -94,12 +94,82 @@ class Store extends Api
         $action = 'inventory.wms.upload';
 
         $params = [
-            'sku_id' => $sku_id,
-            'qty' => $qty
+            [
+                'sku_id' => $sku_id,
+                'qty' => $qty
+            ]
+        ];
+        //普通接口调用方式,查询全部店铺信息
+        $response = $service->shops_query($action,$params);
+        // dump($response);
+        return $response;
+    }
+
+    // 新建盘点单
+    public function inventory_upload($order_sn,$sku_id, $qty)
+    {
+        $cfg = $this->cfg;
+
+        $service = new Service($cfg);
+
+        $action = 'jushuitan.inventory.upload';
+
+        $params = [
+            'wms_co_id' => 10391408,    //分仓公司ID
+            'type' => 'check',    //盘点类型 :全量:check ;增量:adjust(默认adjust)
+            'is_confirm' => true,   //是否自动确认，默认false，增量同步时只能传true
+            'data' => [
+                [
+                    'so_id' => $order_sn,    //外部单号，会在ERP判断重复，仅可用一次
+                    'warehouse' => 1,    //仓库;主仓=1，销退仓=2， 进货仓=3，次品仓 = 4
+                    // 'remark' => '',     //备注
+                    'items' => [
+                        [
+                            "qty" => $qty,
+                            "sku_id" => (string)$sku_id
+                        ]
+                    ]
+                ]
+            ]
         ];
         //普通接口调用方式,查询全部店铺信息
         $response = $service->shops_query($action,$params);
         return $response;
+    }
+
+    // 查询仓位
+    /*
+    array(9) {
+        ["page_size"] => int(0)
+        ["page_index"] => int(0)
+        ["data_count"] => int(0)
+        ["page_count"] => int(0)
+        ["has_next"] => bool(false)
+        ["datas"] => array(1) {
+            [0] => array(4) {
+                ["name"] => string(15) "杭州近江店"
+                ["co_id"] => int(10367626)
+                ["wms_co_id"] => int(10391408)
+                ["status"] => string(6) "生效"
+            }
+        }
+        ["code"] => int(0)
+        ["issuccess"] => bool(true)
+        ["msg"] => NULL
+    }
+    */
+    public function partner()
+    {
+        $cfg = $this->cfg;
+
+        $service = new Service($cfg);
+
+        $action = 'wms.partner.query';
+
+        //普通接口调用方式,查询全部店铺信息
+        $response = $service->shops_query($action,[]);
+        dump($response);
+        // return $response;
     }
 
 
