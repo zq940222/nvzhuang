@@ -68,8 +68,7 @@ class Ads extends Backend
 
     public function catelist()
     {
-        $id = db('category')->where('name="品牌"')->value('id');
-        $list = db('category')->where('pid='.$id)->select();
+        $list = db('category')->where('pid>0')->select();
 
         $total = count($list);
         $result = array("total" => $total, "rows" => $list);
