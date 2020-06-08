@@ -68,10 +68,26 @@ class Ads extends Backend
 
     public function catelist()
     {
-        $list = db('category')->where('pid>0')->select();
+        $keyValue = $this->request->request("keyValue");
+        if($keyValue){
+            $list = db('category')
+            ->where('id='.$keyValue)
+            ->find();
+            $total = 1;
+        }else{
+            $total = db('category')->where('pid>0')->count();
 
-        $total = count($list);
-        $result = array("total" => $total, "rows" => $list);
+            $pageNumber = $this->request->request('pageNumber');
+            $pageSize = $this->request->request('pageSize');
+
+            $start = ($pageNumber - 1) * $pageSize;
+            $list = db('category')
+            ->where('pid>0')
+            ->limit($start,$pageSize)
+            ->select();
+        }
+        
+        $result = array("total" => $total, "list" => $list);
         return json($result);
     }
 
