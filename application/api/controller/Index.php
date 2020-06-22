@@ -55,7 +55,17 @@ class Index extends Api
         $this->success('请求成功',$data);
     }
 
-    // 款式推荐
+    // 新品推荐
+    public function best_list()
+    {
+        $data = db('category')
+        ->where('pid!=0 and flag like "%recommend%"')
+        ->select();
+
+        $this->success('请求成功',$data);
+    }
+
+    // 热卖推荐
     public function hot_list()
     {
         $user_id = $this->request->request('user_id');
