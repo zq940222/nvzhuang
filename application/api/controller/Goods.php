@@ -59,6 +59,7 @@ class Goods extends Api
         }
 
         $level = db('user')->where('id='.$user_id)->value('level_id');
+        if($level == 5) $level = '';
 
         $field = 'id as goods_id,goods_sn,name,cover_image,price,tag_price,price'.$level.' as lprice';
         $where = 'is_on_sale=1';
@@ -137,7 +138,8 @@ class Goods extends Api
         db('goods')->where('id='.$goods_id)->setInc('click_count', 1);
 
         $level = db('user')->where('id='.$user_id)->value('level_id');
-
+        if($level == 5) $level = '';
+        
         $field = 'id as goods_id,goods_sn,name,cover_image,goods_images,price,tag_price,price'.$level.' as lprice,goods_content,store_count';
         $where = 'is_on_sale=1 and id='.$goods_id;
 

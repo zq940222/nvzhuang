@@ -70,7 +70,7 @@ class Index extends Api
     {
         $user_id = $this->request->request('user_id');
         $level = db('user')->where('id='.$user_id)->value('level_id');
-
+        if($level == 5) $level = '';
         $field = 'id as goods_id,goods_sn,name,cover_image,price,tag_price,price'.$level.' as lprice';
         $where = 'is_on_sale=1 and is_hot=1';
 

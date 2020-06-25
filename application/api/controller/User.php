@@ -84,7 +84,8 @@ class User extends Api
             ->find();
             $user = db('user')->where('id='.$user_id)->find();
             $level_info = db('level')
-            ->where('id>='.$user['level_id'])
+            ->where('id=0 or id>='.$user['level_id'])
+            ->order('id','desc')
             ->select();
         }
         unset($pay_info['company_address']);
@@ -143,11 +144,18 @@ class User extends Api
         $data['pay_certificate_images'] = $this->request->request('pay_certificate_images');
         $level = db('level')->where('id='.$data['agency_id'])->find();
         
-        foreach ($data as $key => $value) {
-            if(!$value) {
-                $this->error(__('无效的参数 : '.$key), null, -1);
+        if($data['agency_id'] != 5){
+            foreach ($data as $key => $value) {
+                if(!$value) {
+                    $this->error(__('无效的参数 : '.$key), null, -1);
+                }
+            }
+        }else{
+            foreach ($data as $key => $value) {
+                if(empty($value)) unset($data[$key]);
             }
         }
+        
         $data['goods_payment'] = 0;
         $data['remarks'] = $this->request->request('remarks');
         $mobile = db('user')->where('status="1" and mobile="'.$data['mobile'].'"')->find();
@@ -161,10 +169,10 @@ class User extends Api
         // }
         /****验证码验证end****/
         /*--申请一个身份证一个账号--*/
-        // $user = db('user')->where('status="1" and id_card="'.$data['id_card'].'"')->find();
-        // if(!empty($user)) {
-        //     $this->error('该身份证号已申请过账号', null, -3);
-        // }
+        $user = db('user')->where('status="1" and id_card="'.$data['id_card'].'"')->find();
+        if(!empty($user)) {
+            $this->error('该身份证号已申请过账号', null, -3);
+        }
         Db::startTrans();
         //先判断邀请人id是否存在
         if(!empty($data['inviter_id'])){
@@ -186,33 +194,35 @@ class User extends Api
                 $data['superior_id'] = $superior_id;
             }
 
-            $Common = new Common;
-            if($data['superior_id'] > 0){
-                $superior_user = db('user')->where('id='.$data['superior_id'])->find();
-                //计算上级成本价,如果注册成功从上级所获利润中拿出（注册人需交的货款额*0.1）给推荐人作为推荐奖励（加到推荐人余额里）
-                $superior_level = db('level')->where('id='.$superior_user['level_id'])->find();
-                $superior_goods_payment = ($level['goods_payment'] / $level['discount']) * $superior_level['discount'];
-                $data['goods_payment'] = $superior_goods_payment;
-                //如果货款不足，提醒充值
-                if($superior_user['goods_payment'] < $superior_goods_payment){
-                    //给走货上级发送的代理申请消息
-                    $message_template = db('message_template')->where('id=1')->find();
-                    $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
-                    $content2 = str_replace('level_name', $level['name'], $content1);
-                    $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
-                    Db::commit();
-                    $this->error('上级资金不足，请提醒补充', null, -4);
-                }else{
-                    //判断走货上级是否有充值的货款，如果有优先走入代理的货款
-                    // 递归判断上级是否使用了充值货款
-                    $uabm_arr = $this->parent_goods_payment($superior_user['id'],$superior_goods_payment,$Common);
+            if($data['agency_id'] != 5){
+                $Common = new Common;
+                if($data['superior_id'] > 0){
+                    $superior_user = db('user')->where('id='.$data['superior_id'])->find();
+                    //计算上级成本价,如果注册成功从上级所获利润中拿出（注册人需交的货款额*0.1）给推荐人作为推荐奖励（加到推荐人余额里）
+                    $superior_level = db('level')->where('id='.$superior_user['level_id'])->find();
+                    $superior_goods_payment = ($level['goods_payment'] / $level['discount']) * $superior_level['discount'];
+                    $data['goods_payment'] = $superior_goods_payment;
+                    //如果货款不足，提醒充值
+                    if($superior_user['goods_payment'] < $superior_goods_payment){
+                        //给走货上级发送的代理申请消息
+                        $message_template = db('message_template')->where('id=1')->find();
+                        $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
+                        $content2 = str_replace('level_name', $level['name'], $content1);
+                        $Common->ins_message($data['superior_id'], $message_template['message_title'], $content2);
+                        Db::commit();
+                        $this->error('上级资金不足，请提醒补充', null, -4);
+                    }else{
+                        //判断走货上级是否有充值的货款，如果有优先走入代理的货款
+                        // 递归判断上级是否使用了充值货款
+                        $uabm_arr = $this->parent_goods_payment($superior_user['id'],$superior_goods_payment,$Common);
+                    }
                 }
+                //给推荐人发送的代理申请消息
+                $message_template = db('message_template')->where('id=2')->find();
+                $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
+                $content2 = str_replace('level_name', $level['name'], $content1);
+                $Common->ins_message($data['inviter_id'], $message_template['message_title'], $content2);
             }
-            //给推荐人发送的代理申请消息
-            $message_template = db('message_template')->where('id=2')->find();
-            $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
-            $content2 = str_replace('level_name', $level['name'], $content1);
-            $Common->ins_message($data['inviter_id'], $message_template['message_title'], $content2);
         }
         
         $data['createtime'] = time();
@@ -223,6 +233,11 @@ class User extends Api
                 db('user_agent_back_money')
                 ->where('status=0 and id in ('.$uabm_ids.')')
                 ->update(['type'=>1,'agent_id'=>$res]);
+            }
+            if($data['agency_id'] == 5){
+                db('agent_apply')->where('id='.$res)->setField('status',1);
+                $model = new \app\api\model\User();
+                $model->register($res);
             }
             Db::commit();
             $this->success('提交成功');
@@ -411,6 +426,8 @@ class User extends Api
         if ($ret) {
             $userinfo = $this->auth->getUserinfo();
             if(!empty($userinfo['avatar'])) $userinfo['avatar'] = get_http_host($userinfo['avatar']);
+            $user = db('user')->where('mobile="'.$account.'"')->find();
+            $userinfo['level'] = $user['level_id'];
             $data = ['userinfo' => $userinfo];
             Session::set($account, $userinfo);
             $this->success(__('Logged in successful'), $data);
