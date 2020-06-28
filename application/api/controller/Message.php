@@ -34,17 +34,17 @@ class Message extends Api
         if(!$user_id) $this->error('参数:user_id不能为空', null, -1);
 
         $data['total_num'] = db('message')
-        ->where('is_read=0 and user_id='.$user_id)
+        ->where('is_read=0 and user_id=0 and user_id='.$user_id)
         ->order('createtime','desc')
         ->count();
 
         $data['type_1_num'] = db('message')
-        ->where('message_category=1 and is_read=0 and user_id='.$user_id)
+        ->where('message_category=1 and is_read=0 and user_id=0 and user_id='.$user_id)
         ->order('createtime','desc')
         ->count();
 
         $data['type_2_num'] = db('message')
-        ->where('message_category=2 and is_read=0 and user_id='.$user_id)
+        ->where('message_category=2 and is_read=0 and user_id=0 and user_id='.$user_id)
         ->order('createtime','desc')
         ->count();
 
@@ -66,7 +66,7 @@ class Message extends Api
         if(empty($message_category)) $message_category = $this->message_category;
 
         $data = db('message')
-        ->where('message_category='.$message_category.' and user_id='.$user_id)
+        ->where('message_category='.$message_category.' and user_id=0 and user_id='.$user_id)
         ->order('createtime','desc')
         ->select();
 
