@@ -399,7 +399,7 @@ class Order extends Api
             $order['createtime'] = time();
             $order['shipment'] = '平台';
             $order['shipment_id'] = 0;
-            $order['admin_reamrk'] = $data['admin_reamrk'];
+            $order['admin_remark'] = $data['admin_remark'];
             //判断用户货款剩余与充值货款剩余是否相等
             $gm_money = 0;
             if($user['goods_payment'] == $user['recharge_goods_money']){
