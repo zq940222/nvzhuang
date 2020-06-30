@@ -87,8 +87,13 @@ class Cart extends Api
             foreach ($data as $key => $value) {
                 $goods = db('goods')->field('name,cover_image')->where('id',$data[$key]['goods_id'])->find();
                 $data[$key] = array_merge($value,$goods);
-                $data[$key]['spec_name'] = db('spec_goods_price')->where('id='.$data[$key]['goods_spec_id'])->value('key_name');
-                $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
+                $spec_goods_price = db('spec_goods_price')->where('id='.$data[$key]['goods_spec_id'])->find();
+                $data[$key]['spec_name'] = $spec_goods_price['key_name'];
+                if(!empty($spec_goods_price['spec_image'])){
+                    $data[$key]['cover_image'] = get_http_host($spec_goods_price['spec_image']);
+                }else{
+                    $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
+                }
             }
         }
         

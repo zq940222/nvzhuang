@@ -66,10 +66,17 @@ class Order extends Backend
                 $list[$key]['users'] = db('user')
                 ->where('id='.$list[$key]['user_id'])
                 ->find();
-                $list[$key]['goods'] = db('order_goods a')
-                ->join('spec_goods_price b','a.item_id=b.id')
+                $order_goods = db('order_goods a')
+                ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
                 ->where('a.order_id='.$list[$key]['id'])
                 ->find();
+                if(!empty($order_goods)){
+                    if(empty($order_goods['spec_image'])){
+                        $order_goods['spec_image'] = db('goods')->where('id='.$order_goods['goods_id'])->value('cover_image');
+                    }
+                }
+                
+                $list[$key]['goods'] = $order_goods;
             }
             $result = array("total" => $total, "rows" => $list);
             return json($result);
@@ -92,7 +99,7 @@ class Order extends Backend
             ->select();
             foreach ($order_goods as $key => $value) {
                 $spec_image = db('spec_goods_price')
-                ->where('id='.$order_goods[$key]['item_id'])
+                ->where('goods_id='.$order_goods[$key]['goods_id'].' and `key`="'.$order_goods[$key]['spec_key'].'"')
                 ->value('spec_image');
                 $order_goods[$key]['spec_image'] = $spec_image;
             }
@@ -157,4 +164,52 @@ class Order extends Backend
         $this->view->assign("row", $row);
         return $this->view->fetch();
     }
+
+    /**
+     * 填写备注
+     * @return mixed
+     */
+    public function remark($ids=null)
+    {
+        $row = $this->model->get(['id' => $ids]);
+        if (!$row) {
+            $this->error(__('No Results were found'));
+        }
+        if ($this->request->isPost()) {
+            $params = $this->request->post("row/a");
+            if ($params) {
+                $params = $this->preExcludeFields($params);
+                $result = false;
+                Db::startTrans();
+                try {
+                    //是否采用模型验证
+                    if ($this->modelValidate) {
+                        $name = str_replace("\\model\\", "\\validate\\", get_class($this->model));
+                        $validate = is_bool($this->modelValidate) ? ($this->modelSceneValidate ? $name . '.edit' : $name) : $this->modelValidate;
+                        $row->validateFailException(true)->validate($validate);
+                    }
+                    $result = $row->allowField(true)->save($params);
+                    Db::commit();
+                } catch (ValidateException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (PDOException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (Exception $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                }
+                if ($result !== false) {
+                    $this->success();
+                } else {
+                    $this->error(__('No rows were updated'));
+                }
+            }
+            $this->error(__('Parameter %s can not be empty', ''));
+        }
+        $this->view->assign("row", $row);
+        return $this->view->fetch();
+    }
+
 }

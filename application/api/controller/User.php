@@ -76,6 +76,7 @@ class User extends Api
             $parent_info['nickname'] = $pay_info['company_name'];
             $parent_info['mobile'] = $pay_info['company_phone'];
             $level_info = db('level')
+            ->order('id','desc')
             ->select();
         }else{
             $parent_info = db('user')
@@ -129,7 +130,7 @@ class User extends Api
         $data['agency_id'] = $this->request->request('agency_id');
         $data['name'] = $this->request->request('name');
         $data['mobile'] = $this->request->request('mobile');
-        // $captcha = $this->request->request('captcha');
+        $captcha = $this->request->request('captcha');
         $data['password'] = $this->request->request('password');
         $data['wx'] = $this->request->request('wx');
         $data['id_card'] = $this->request->request('id_card');
@@ -163,10 +164,10 @@ class User extends Api
             $this->error('账号已存在', null, -3);
         }
         /****验证码验证****/
-        // $ret = Sms::check($data['mobile'], $captcha, 'register');
-        // if (!$ret) {
-        //     $this->error(__('Captcha is incorrect'));
-        // }
+        $ret = Sms::check($data['mobile'], $captcha, 'register');
+        if (!$ret) {
+            $this->error(__('Captcha is incorrect'));
+        }
         /****验证码验证end****/
         /*--申请一个身份证一个账号--*/
         $user = db('user')->where('status="1" and id_card="'.$data['id_card'].'"')->find();
@@ -194,8 +195,8 @@ class User extends Api
                 $data['superior_id'] = $superior_id;
             }
 
+            $Common = new Common;
             if($data['agency_id'] != 5){
-                $Common = new Common;
                 if($data['superior_id'] > 0){
                     $superior_user = db('user')->where('id='.$data['superior_id'])->find();
                     //计算上级成本价,如果注册成功从上级所获利润中拿出（注册人需交的货款额*0.1）给推荐人作为推荐奖励（加到推荐人余额里）
@@ -217,12 +218,13 @@ class User extends Api
                         $uabm_arr = $this->parent_goods_payment($superior_user['id'],$superior_goods_payment,$Common);
                     }
                 }
-                //给推荐人发送的代理申请消息
-                $message_template = db('message_template')->where('id=2')->find();
-                $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
-                $content2 = str_replace('level_name', $level['name'], $content1);
-                $Common->ins_message($data['inviter_id'], $message_template['message_title'], $content2);
             }
+            //给推荐人发送的代理申请消息
+            $message_template = db('message_template')->where('id=2')->find();
+            $content1 = str_replace('nick_name', $data['name'], $message_template['message_content']);
+            $content2 = str_replace('level_name', $level['name'], $content1);
+            $Common->ins_message($data['inviter_id'], $message_template['message_title'], $content2);
+            
         }
         
         $data['createtime'] = time();

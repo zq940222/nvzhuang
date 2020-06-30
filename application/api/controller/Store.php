@@ -66,7 +66,7 @@ class Store extends Api
         $action = 'inventory.query';
 
         $params = [
-            'wms_co_id' => 10391408,
+            'wms_co_id' => 10557038,
             'page_index' => 1,
             'page_size' => 30,
             // 'modified_begin' => , //datetime          修改起始时间，和结束时间必须同时存在，时间间隔不能超过七天
@@ -106,7 +106,7 @@ class Store extends Api
     }
 
     // 新建盘点单
-    public function inventory_upload($order_sn,$sku_id, $qty)
+    public function inventory_upload($order_sn='sn66660109',$sku_id='66660109', $qty=1)
     {
         $cfg = $this->cfg;
 
@@ -115,7 +115,7 @@ class Store extends Api
         $action = 'jushuitan.inventory.upload';
 
         $params = [
-            'wms_co_id' => 10391408,    //分仓公司ID
+            'wms_co_id' => 10557038,    //分仓公司ID
             'type' => 'check',    //盘点类型 :全量:check ;增量:adjust(默认adjust)
             'is_confirm' => true,   //是否自动确认，默认false，增量同步时只能传true
             'data' => [
@@ -134,29 +134,36 @@ class Store extends Api
         ];
         //普通接口调用方式,查询全部店铺信息
         $response = $service->shops_query($action,$params);
+        dump($response);
         return $response;
     }
 
     // 查询仓位
     /*
-    array(9) {
-        ["page_size"] => int(0)
-        ["page_index"] => int(0)
-        ["data_count"] => int(0)
-        ["page_count"] => int(0)
-        ["has_next"] => bool(false)
-        ["datas"] => array(1) {
-            [0] => array(4) {
-                ["name"] => string(15) "杭州近江店"
-                ["co_id"] => int(10367626)
-                ["wms_co_id"] => int(10391408)
-                ["status"] => string(6) "生效"
-            }
+array(9) {
+    ["page_size"] => int(0)
+    ["page_index"] => int(0)
+    ["data_count"] => int(0)
+    ["page_count"] => int(0)
+    ["has_next"] => bool(false)
+    ["datas"] => array(2) {
+        [0] => array(4) {
+            ["name"] => string(15) "杭州近江店"
+            ["co_id"] => int(10367626)
+            ["wms_co_id"] => int(10391408)
+            ["status"] => string(6) "生效"
         }
-        ["code"] => int(0)
-        ["issuccess"] => bool(true)
-        ["msg"] => NULL
+        [1] => array(4) {
+            ["name"] => string(12) "自建商城"
+            ["co_id"] => int(10367626)
+            ["wms_co_id"] => int(10557038)
+            ["status"] => string(6) "生效"
+        }
     }
+    ["code"] => int(0)
+    ["issuccess"] => bool(true)
+    ["msg"] => NULL
+}
     */
     public function partner()
     {

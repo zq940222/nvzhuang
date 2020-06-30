@@ -65,7 +65,7 @@ class Refund extends Backend
             $list = collection($list)->toArray();
             foreach ($list as $key => $value) {
                 $list[$key]['goods'] = db('order_goods a')
-                ->join('spec_goods_price b','a.item_id=b.id')
+                ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
                 ->where('a.id='.$list[$key]['order_goods_id'])
                 ->find();
             }
@@ -114,7 +114,7 @@ class Refund extends Backend
             $this->success();
         }else{
             $order->goods = db('order_goods a')
-            ->join('spec_goods_price b','a.item_id=b.id')
+            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
             ->where('a.id='.$order->order_goods_id)
             ->find();
         }

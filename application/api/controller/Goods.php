@@ -167,7 +167,7 @@ class Goods extends Api
             }
             $goods['goods_images'] = $goods_images;
         }
-        $goods['goods_content'] = str_replace('/uploads/', 'http://scdaili.com/uploads/', $goods['goods_content']);
+        $goods['goods_content'] = str_replace('/uploads/', 'http://'.$_SERVER['HTTP_HOST'].'/uploads/', $goods['goods_content']);
         $spec_field = 'id as group_id,goods_id,key,key_name,price,tag_price,price'.$level.' as lprice,store_count,spec_image';
 
         $spec_goods_price = db('spec_goods_price')
@@ -176,7 +176,11 @@ class Goods extends Api
         ->select();
         $spec_ids = array();
         foreach ($spec_goods_price as $key => $value) {
-            if(!empty($spec_goods_price[$key]['spec_image'])) $spec_goods_price[$key]['spec_image'] = get_http_host($spec_goods_price[$key]['spec_image']);
+            if(!empty($spec_goods_price[$key]['spec_image'])){
+                $spec_goods_price[$key]['spec_image'] = get_http_host($spec_goods_price[$key]['spec_image']);
+            }else{
+                $spec_goods_price[$key]['spec_image'] = $goods['cover_image'];
+            }
             $spec_key = explode(',', $value['key']);
             foreach ($spec_key as $key1 => $value1) {
                 $spec_key_arr[] = $value1;

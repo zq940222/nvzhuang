@@ -399,6 +399,7 @@ class Order extends Api
             $order['createtime'] = time();
             $order['shipment'] = '平台';
             $order['shipment_id'] = 0;
+            $order['admin_reamrk'] = $data['admin_reamrk'];
             //判断用户货款剩余与充值货款剩余是否相等
             $gm_money = 0;
             if($user['goods_payment'] == $user['recharge_goods_money']){
@@ -685,12 +686,17 @@ class Order extends Api
         ->select();
         foreach ($order as $key => $value) {
             $order_goods = db('order_goods a')
-            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
             ->field('a.id as order_goods_id,a.goods_id,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,a.goods_price as price')
             ->where('a.order_id='.$value['order_id'])
             ->select();
             foreach ($order_goods as $key1 => $value1) {
-                if(!empty($order_goods[$key1]['image'])) $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
+                if(!empty($order_goods[$key1]['image'])){
+                    $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
+                }else{
+                    $cover_image = db('goods')->where('id='.$order_goods[$key1]['goods_id'])->value('cover_image');
+                    $order_goods[$key1]['image'] = get_http_host($cover_image);
+                }
             }
             $order[$key]['goods_data'] = $order_goods;
         }
@@ -974,7 +980,7 @@ class Order extends Api
             ->value('refund_type');
         }
         $order_goods = db('order_goods a')
-        ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+        ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
         ->join('order c','a.order_id=c.id','INNER')
         ->field('a.id as order_goods_id,a.goods_id,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,b.price'.$level_id.' as price,c.profit')
         ->where('a.order_id='.$order['order_id'])
@@ -1156,7 +1162,7 @@ class Order extends Api
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
 
         $order_goods = db('order_goods a')
-        ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+        ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
         ->join('order c','a.order_id=c.id','INNER')
         ->field('a.goods_id,a.id as order_goods_id,c.order_sn,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,b.price'.$level_id.' as price')
         ->where('a.id='.$order_goods_id)
@@ -1204,7 +1210,7 @@ class Order extends Api
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
         $price = db('order_goods a')
-        ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+        ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
         ->join('order c','a.order_id=c.id','INNER')
         ->where('a.id='.$order_goods_id)
         ->value('b.price'.$level_id);
@@ -1249,7 +1255,7 @@ class Order extends Api
         if($refund_order['status'] == 0 || $refund_order['status'] == 3)
         {
             $order_goods = db('order_goods a')
-            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
             ->join('order c','a.order_id=c.id','INNER')
             ->field('a.goods_id,a.id as order_goods_id,c.order_sn,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,b.price'.$level_id.' as price')
             ->where('a.id='.$refund_order['order_goods_id'])
@@ -1410,7 +1416,7 @@ class Order extends Api
             $data[$key]['order_price'] = $refund_order[$key]['order_price'];
 
             $order_goods = db('order_goods a')
-            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.item_id=b.id','INNER')
+            ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
             ->field('a.goods_id,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,a.goods_price as price')
             ->where('a.id='.$refund_order[$key]['order_goods_id'])
             ->find();
