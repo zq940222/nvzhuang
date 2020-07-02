@@ -115,6 +115,9 @@ class Order extends Backend
                 $spec_image = db('spec_goods_price')
                 ->where('goods_id='.$order_goods[$key]['goods_id'].' and `key`="'.$order_goods[$key]['spec_key'].'"')
                 ->value('spec_image');
+                if(empty($spec_image)){
+                    $spec_image = db('goods')->where('id='.$order_goods[$key]['goods_id'])->value('cover_image');
+                }
                 $order_goods[$key]['spec_image'] = $spec_image;
             }
         }

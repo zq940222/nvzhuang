@@ -38,10 +38,11 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         // {field: 'area_id', title: __('Area_id'),operate:false},
                         // {field: 'address', title: __('Address'),operate:false},
                         {field: 'order_goods.0.goods_name', title: __('商品名称'), operate:false},
+                        // {field: 'order_goods.0.goods_name', title: __('商品名称'), cellStyle:Controller.api.formatter.css, operate:false},
                         {field: 'order_goods.0.spec_image', title: __('商品主图'), operate:false, events: Table.api.events.image, formatter: Table.api.formatter.image},
                         {field: 'order_goods.0.spec_key_name', title: __('商品规格'), operate:false},
-                        {field: 'user_remark', title: __('用户备注'), operate:false},
-                        {field: 'admin_remark', title: __('后台备注'), operate:false},
+                        // {field: 'user_remark', title: __('用户备注'), operate:false},
+                        // {field: 'admin_remark', title: __('后台备注'), operate:false},
                         // {field: 'mobile', title: __('Mobile')},
                         {field: 'users.wx', title: __('微信号'), operate: 'LIKE %...%', placeholder: '模糊搜索'},
                         // {field: 'goods_price', title: __('Goods_price'), operate:'BETWEEN'},
@@ -53,8 +54,8 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         // {field: 'goods_num', title: __('Goods_num')},
                         // {field: 'profit', title: __('Profit'),operate:false},
                         {field: 'createtime', title: __('Createtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
-                        {field: 'shipping_time', title: __('Shipping_time'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
-                        {field: 'confirm_time', title: __('Confirm_time'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
+                        // {field: 'shipping_time', title: __('Shipping_time'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
+                        // {field: 'confirm_time', title: __('Confirm_time'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
                         {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate,
                             buttons: [
                                 {
@@ -108,6 +109,19 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
         api: {
             bindevent: function () {
                 Form.api.bindevent($("form[role=form]"));
+            },
+            formatter:{
+                css:function(){
+                    return {
+                        css:{
+                            "max-width":"100px !important",
+                            "overflow":"hidden",
+                            "white-space":"nowrap", 
+                            "text-overflow":"ellipsis", 
+                            // "display":"block", 
+                        }
+                    }
+                }
             }
         }
     };
