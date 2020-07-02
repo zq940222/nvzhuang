@@ -59,13 +59,14 @@ class RefundOrder extends Model
 
     public function users()
     {
-        return $this->hasone('user', 'id', 'user_id')->field('id,nickname');
+        // return $this->hasone('user', 'id', 'user_id')->field('id,nickname');
+        return $this->belongsTo('user', 'user_id', 'id',[],'LEFT')->setEagerlyType(0);
     }
 
     //获取所有订单商品
-    public function Goods()
+    public function goods()
     {
-        return $this->belongsTo('Goods', 'order_goods_id', 'id');
+        return $this->hasMany('OrderGoods', 'order_id', 'id');
     }
 
 

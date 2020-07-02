@@ -42,6 +42,8 @@ class Refund extends Backend
      */
     public function index()
     {
+        //当前方法是否存在关联模型
+        $this->relationSearch = true;  
         //设置过滤方法
         $this->request->filter(['strip_tags']);
         if ($this->request->isAjax()) {
@@ -51,6 +53,7 @@ class Refund extends Backend
             }
             list($where, $sort, $order, $offset, $limit) = $this->buildparams();
             $total = $this->model
+                ->with(['users', 'goods'])
                 ->where($where)
                 ->order($sort, $order)
                 ->count();
@@ -63,12 +66,12 @@ class Refund extends Backend
                 ->select();
 
             $list = collection($list)->toArray();
-            foreach ($list as $key => $value) {
-                $list[$key]['goods'] = db('order_goods a')
-                ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
-                ->where('a.id='.$list[$key]['order_goods_id'])
-                ->find();
-            }
+            // foreach ($list as $key => $value) {
+            //     $list[$key]['goods'] = db('order_goods a')
+            //     ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
+            //     ->where('a.id='.$list[$key]['order_goods_id'])
+            //     ->find();
+            // }
             $result = array("total" => $total, "rows" => $list);
             return json($result);
         }
