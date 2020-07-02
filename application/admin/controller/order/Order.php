@@ -42,6 +42,8 @@ class Order extends Backend
      */
     public function index()
     {
+        //当前方法是否存在关联模型
+        $this->relationSearch = true;  
         //设置过滤方法
         $this->request->filter(['strip_tags']);
         if ($this->request->isAjax()) {
@@ -49,13 +51,15 @@ class Order extends Backend
             if ($this->request->request('keyField')) {
                 return $this->selectpage();
             }
-            list($where, $sort, $order, $offset, $limit) = $this->buildparams();
+            list($where, $sort, $order, $offset, $limit) = $this->buildparams(null,true);
             $total = $this->model
+                ->with(['users','OrderGoods'])
                 ->where($where)
                 ->order($sort, $order)
                 ->count();
 
             $list = $this->model
+                ->with(['users','OrderGoods'])
                 ->where($where)
                 ->order($sort, $order)
                 ->limit($offset, $limit)
@@ -63,20 +67,30 @@ class Order extends Backend
 
             $list = collection($list)->toArray();
             foreach ($list as $key => $value) {
-                $list[$key]['users'] = db('user')
-                ->where('id='.$list[$key]['user_id'])
-                ->find();
-                $order_goods = db('order_goods a')
-                ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
-                ->where('a.order_id='.$list[$key]['id'])
-                ->find();
+                $order_goods = $list[$key]['order_goods'];
                 if(!empty($order_goods)){
-                    if(empty($order_goods['spec_image'])){
-                        $order_goods['spec_image'] = db('goods')->where('id='.$order_goods['goods_id'])->value('cover_image');
+                    foreach ($order_goods as $k => $v) {
+                        if(empty($order_goods[$k]['spec_image'])){
+                            $order_goods[$k]['spec_image'] = db('goods')->where('id='.$order_goods[$k]['goods_id'])->value('cover_image');
+                        }
                     }
                 }
+                $list[$key]['order_goods'] = $order_goods;
                 
-                $list[$key]['goods'] = $order_goods;
+                // $list[$key]['users'] = db('user')
+                // ->where('id='.$list[$key]['user_id'])
+                // ->find();
+                // $order_goods = db('order_goods a')
+                // ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
+                // ->where('a.order_id='.$list[$key]['id'])
+                // ->find();
+                // if(!empty($order_goods)){
+                //     if(empty($order_goods['spec_image'])){
+                //         $order_goods['spec_image'] = db('goods')->where('id='.$order_goods['goods_id'])->value('cover_image');
+                //     }
+                // }
+                
+                // $list[$key]['goods'] = $order_goods;
             }
             $result = array("total" => $total, "rows" => $list);
             return json($result);

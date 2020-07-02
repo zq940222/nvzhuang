@@ -86,7 +86,8 @@ class Order extends Model
 
     public function users()
     {
-        return $this->hasone('user', 'id', 'user_id')->field('id,nickname');
+        // return $this->hasone('user', 'id', 'user_id')->field('id,nickname,wx');
+        return $this->belongsTo('user', 'user_id', 'id',[],'LEFT')->setEagerlyType(0);
     }
 
     //获取所有订单商品
