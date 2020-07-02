@@ -64,9 +64,9 @@ class RefundOrder extends Model
     }
 
     //获取所有订单商品
-    public function goods()
+    public function OrderGoods()
     {
-        return $this->hasMany('OrderGoods', 'order_id', 'id');
+        return $this->hasMany('OrderGoods', 'order_id', 'order_goods_id');
     }
 
 

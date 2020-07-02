@@ -53,19 +53,30 @@ class Refund extends Backend
             }
             list($where, $sort, $order, $offset, $limit) = $this->buildparams();
             $total = $this->model
-                ->with(['users', 'goods'])
+                ->with(['users', 'OrderGoods'])
                 ->where($where)
                 ->order($sort, $order)
                 ->count();
 
             $list = $this->model
-                ->with(['users', 'goods'])
+                ->with(['users', 'OrderGoods'])
                 ->where($where)
                 ->order($sort, $order)
                 ->limit($offset, $limit)
                 ->select();
 
             $list = collection($list)->toArray();
+            foreach ($list as $key => $value) {
+                $order_goods = $list[$key]['order_goods'];
+                if(!empty($order_goods)){
+                    foreach ($order_goods as $k => $v) {
+                        if(empty($order_goods[$k]['spec_image'])){
+                            $order_goods[$k]['spec_image'] = db('goods')->where('id='.$order_goods[$k]['goods_id'])->value('cover_image');
+                        }
+                    }
+                }
+                $list[$key]['order_goods'] = $order_goods;
+            }
             // foreach ($list as $key => $value) {
             //     $list[$key]['goods'] = db('order_goods a')
             //     ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key')
