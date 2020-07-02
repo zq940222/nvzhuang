@@ -18,7 +18,7 @@ return [
     // 应用命名空间
     'app_namespace'          => 'app',
     // 应用调试模式
-    'app_debug'              => Env::get('app.debug', true),
+    'app_debug'              => Env::get('app.debug', false),
     // 应用Trace
     'app_trace'              => Env::get('app.trace', false),
     // 应用模式状态
@@ -184,6 +184,17 @@ return [
         // 缓存有效期 0表示永久缓存
         'expire' => 0,
     ],
+    //redis缓存设置
+        'redis'   =>  [
+            // 驱动方式
+            'type'   => 'redis',
+            // 服务器地址
+            'host'   => '127.0.0.1',  //redis服务器ip
+            'password' => '',
+            'port'   => '6379',
+            'password'=> "",
+            'timeout' => 3600
+        ], 
     // +----------------------------------------------------------------------
     // | 会话设置
     // +----------------------------------------------------------------------

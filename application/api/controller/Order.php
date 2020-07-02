@@ -663,11 +663,11 @@ class Order extends Api
         if(empty($page)) $page = 1;
         if(empty($count)) $count = 10;
         if(empty($date)) $date = date("Y-m");
-        $firstday = date('Y-m-01', strtotime($date));
-        $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
-        $firstday_time = strtotime($firstday);
-        $lastday_time = strtotime($lastday);
-        $time_where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
+        // $firstday = date('Y-m-01', strtotime($date));
+        // $lastday = date('Y-m-d', strtotime("$firstday +1 month -1 day"));
+        // $firstday_time = strtotime($firstday);
+        // $lastday_time = strtotime($lastday);
+        // $time_where = 'createtime >='.$firstday_time.' and createtime <='.$lastday_time;
 
         $start = ($page - 1) * $count;
 
@@ -680,7 +680,7 @@ class Order extends Api
         $order = db('order')
         ->field($field)
         ->where($where)
-        ->where($time_where)
+        // ->where($time_where)
         ->order('createtime','desc')
         ->limit($start,$count)
         ->select();
