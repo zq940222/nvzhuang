@@ -78,20 +78,17 @@ class Goods extends Api
 
         if(!empty($price)) $order['price'.$level] = $price;
 
-        // if(!empty($brand_id)) $where .= ' and brand_id='.$brand_id;
-
-        // if(!empty($style_id)) $where .= ' and style_id='.$style_id;
-
-        // if(!empty($activity_id)) $where .= ' and activity_id='.$activity_id;
-
         if(!empty($cate_id)) {
-            $where .= " and (cate_id LIKE '".$cate_id."' OR cate_id LIKE '".$cate_id.",%' OR cate_id LIKE '%,".$cate_id.",%' OR cate_id LIKE '%,".$cate_id."') ";
-
-            // $cate_id_arr = explode(',', $cate_id);
-            // foreach ($cate_id_arr as $key => $value) {
-            //     $where_arr[$key] = " (cate_id LIKE '".$value."' OR cate_id LIKE '".$value.",%' OR cate_id LIKE '%,".$value.",%' OR cate_id LIKE '%,".$value."') ";
-            // }
-            // $where .= ' and ('.implode(' or ', $where_arr).')';
+            $category = db('category')->where('id',$cate_id)->find();
+            if($category['pid'] == 0){
+                $cates = db('category')->where('pid',$cate_id)->column('id');
+                foreach ($cates as $key => $value) {
+                    $where_arr[$key] = " (cate_id LIKE '".$value."' OR cate_id LIKE '".$value.",%' OR cate_id LIKE '%,".$value.",%' OR cate_id LIKE '%,".$value."') ";
+                }
+                $where .= ' and ('.implode(' or ', $where_arr).')';
+            }else{
+                $where .= " and (cate_id LIKE '".$cate_id."' OR cate_id LIKE '".$cate_id.",%' OR cate_id LIKE '%,".$cate_id.",%' OR cate_id LIKE '%,".$cate_id."') ";
+            }
         }
 
         if(!empty($price_interval)) $where .= ' and price'.$level.' between '.explode('-', $price_interval)[0].' and '.explode('-', $price_interval)[1];
@@ -104,19 +101,7 @@ class Goods extends Api
         ->order($order)
         ->limit($start, $count)
         ->select();
-        // echo db('goods')->getLastSql();
-        // foreach ($data as $key => $value) {
-        //     if(!empty($data[$key]['cover_image'])) $data[$key]['cover_image'] = get_http_host($data[$key]['cover_image']);
-        //     $spec_goods_price = db('spec_goods_price')->where('goods_id='.$data[$key]['goods_id'])->find();
-        //     $data[$key]['price1'] = $spec_goods_price['price1'];
-        //     $data[$key]['price2'] = $spec_goods_price['price2'];
-        //     $data[$key]['price3'] = $spec_goods_price['price3'];
-        //     $data[$key]['price4'] = $spec_goods_price['price4'];
-        //     $data[$key]['tag_price'] = $spec_goods_price['tag_price'];
-        //     $data[$key]['price'] = $spec_goods_price['price'];
-        //     $data[$key]['lprice'] = $spec_goods_price['price'.$level];
-        // }
-
+        
         $this->success('请求成功', $data);
 
     }
