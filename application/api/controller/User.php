@@ -17,7 +17,7 @@ use think\Request;
  */
 class User extends Api
 {
-    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info','get_qrcode','withdraw_apply_success','withdraw_apply_error','recharge_apply_success','recharge_apply_error','service','get_parent_user'];
+    protected $noNeedLogin = ['login','register','resetpwd','changemobile','apply_info','apply_agent','get_http_host','upgrade','pay_info','level_info','get_qrcode','withdraw_apply_success','withdraw_apply_error','recharge_apply_success','recharge_apply_error','service','get_parent_user','get_address_info'];
     protected $noNeedRight = '*';
 
     public function _initialize()
@@ -1302,7 +1302,21 @@ class User extends Api
         return $array;
     }
 
+    // 浙江省杭州市江干区笕桥街道环站北路花园新宸府3幢3单元403
+    // 阿里巴巴   18812345678   浙江省杭州市西湖区古荡街道西斗门路3号天堂软件园a幢
+    public function get_address_info($address)
+    {
+        $DistinguishAddress = new \app\api\model\DistinguishAddress;
 
+        $res = $DistinguishAddress->getAddressResult($address);
+
+        if(!isset($res['code'])){
+            $this->success('请求成功',$res);
+        }else{
+            $this->error($res['msg']);
+        }
+        
+    }
 
 
 
