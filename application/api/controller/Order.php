@@ -672,7 +672,8 @@ class Order extends Api
         $start = ($page - 1) * $count;
 
         $field = 'id as order_id,user_id,order_sn,is_refund,status,goods_num,total_amount,createtime';
-        $where = 'is_refund=0 and user_id='.$user_id;
+        // $where = 'is_refund=0 and user_id='.$user_id;
+        $where = 'user_id='.$user_id;
         if($status > 0) $where .= ' and status='.$status;
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
@@ -685,6 +686,13 @@ class Order extends Api
         ->limit($start,$count)
         ->select();
         foreach ($order as $key => $value) {
+            if($order[$key]['is_refund'] == 1) {
+                $refund_order = db('refund_order')->where('order_id='.$order[$key]['order_id'])->find();
+                // 售后类型:1=仅退款,2=退货退款
+                $order[$key]['refund_type'] = $refund_order['refund_type'];
+                // 状态:-3=失效,-2=取消,-1=审核未通过,0=等待审核,1=寄回商品,2=系统审核,3=退款完成
+                $order[$key]['refund_status'] = (int)$refund_order['status'];
+            }
             $order_goods = db('order_goods a')
             ->join('spec_goods_price b','a.goods_id=b.goods_id and a.spec_key=b.key','INNER')
             ->field('a.id as order_goods_id,a.goods_id,a.goods_name,a.goods_num,a.spec_key_name,b.spec_image as image,a.goods_price as price')
@@ -1400,6 +1408,7 @@ class Order extends Api
         if(!$user_id) $this->error('参数user_id不能为空', null, -1);
 
         $refund_order = db('refund_order')
+        ->where('user_id',$user_id)
         ->order('createtime','desc')
         ->limit($start,$count)
         ->select();
@@ -1423,8 +1432,19 @@ class Order extends Api
             // foreach ($order_goods as $key1 => $value1) {
             //     if(!empty($order_goods[$key1]['image'])) $order_goods[$key1]['image'] = get_http_host($order_goods[$key1]['image']);
             // }
-            if(!empty($order_goods['image'])) $order_goods['image'] = get_http_host($order_goods['image']);
-            $data[$key]['goods_data'] = $order_goods;
+            if(!empty($order_goods)){
+                if(!empty($order_goods['image'])){
+                    $order_goods['image'] = get_http_host($order_goods['image']);
+                }else{
+                    $cover_image = db('goods')->where('id='.$order_goods['goods_id'])->value('cover_image');
+                    $order_goods['image'] = get_http_host($cover_image);
+                }
+                // if(!empty($order_goods['image'])) $order_goods['image'] = get_http_host($order_goods['image']);
+                $data[$key]['goods_data'] = $order_goods;
+            }else{
+                unset($data[$key]);
+            }
+            
         }
         $this->success('请求成功', $data);
     }
