@@ -66,7 +66,23 @@ class Order extends Backend
                 ->select();
 
             $list = collection($list)->toArray();
+            
+            $arr = [
+                '-3'=>'失效',
+                '-2'=>'取消',
+                '-1'=>'审核未通过',
+                '0'=>'等待审核',
+                '1'=>'寄回商品',
+                '2'=>'系统审核',
+                '3'=>'退款完成'
+            ];
+
             foreach ($list as $key => $value) {
+                if($list[$key]['is_refund'] == 1){
+                    $refund_status = $list[$key]['refund_status'] = db('refund_order')->where('order_id',$list[$key]['id'])->value('status');
+                    $list[$key]['status'] = $arr[$refund_status];
+                }
+                
                 $order_goods = $list[$key]['order_goods'];
                 if(!empty($order_goods)){
                     foreach ($order_goods as $k => $v) {
