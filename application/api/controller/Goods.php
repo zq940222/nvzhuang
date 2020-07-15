@@ -72,7 +72,14 @@ class Goods extends Api
 
         $start = ( $page - 1 ) * $count;
 
-        if(!empty($is_new) && $is_new == 1) $where .= ' and is_new=1';
+        if(!empty($is_new)) {
+            if($is_new == 1){
+                // $where .= ' and is_new=1';
+                $order['createtime'] = 'desc';
+            }else{
+                $order['createtime'] = 'asc';
+            }
+        }
 
         if(!empty($sentiment)) $order['click_count'] = $sentiment;
 

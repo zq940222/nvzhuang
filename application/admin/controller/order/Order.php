@@ -66,7 +66,7 @@ class Order extends Backend
                 ->select();
 
             $list = collection($list)->toArray();
-            
+
             $arr = [
                 '-3'=>'失效',
                 '-2'=>'取消',
@@ -123,6 +123,22 @@ class Order extends Backend
         if(empty($order)){
             $this->error('订单不存在或已被删除');
         }
+        $pca = '';
+        if(!empty($order['province_id'])){
+            $province_id = db('area')->where('id',$order['province_id'])->value('name');
+            $pca .= $province_id;
+            if(!empty($order['city_id'])){
+                $city_id = db('area')->where('id',$order['city_id'])->value('name');
+                $pca .= $city_id;
+                if(!empty($order['area_id'])){
+                    $area_id = db('area')->where('id',$order['area_id'])->value('name');
+                    $pca .= $area_id;
+                    $order['address'] = $pca.$order['address'];
+                }
+            }
+        
+        }
+        
         if(!empty($order['order_goods'])){
             $order_goods = db('order_goods')
             ->where('order_id='.$order['id'])
