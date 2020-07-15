@@ -168,16 +168,22 @@ class Goods extends Api
         ->select();
         $spec_ids = array();
         foreach ($spec_goods_price as $key => $value) {
-            if(!empty($spec_goods_price[$key]['spec_image'])){
-                $spec_goods_price[$key]['spec_image'] = get_http_host($spec_goods_price[$key]['spec_image']);
+            if($spec_goods_price[$key]['store_count'] == 0){
+                unset($spec_goods_price[$key]);
             }else{
-                $spec_goods_price[$key]['spec_image'] = $goods['cover_image'];
-            }
-            $spec_key = explode(',', $value['key']);
-            foreach ($spec_key as $key1 => $value1) {
-                $spec_key_arr[] = $value1;
+                if(!empty($spec_goods_price[$key]['spec_image'])){
+                    $spec_goods_price[$key]['spec_image'] = get_http_host($spec_goods_price[$key]['spec_image']);
+                }else{
+                    $spec_goods_price[$key]['spec_image'] = $goods['cover_image'];
+                }
+                $spec_key = explode(',', $value['key']);
+                foreach ($spec_key as $key1 => $value1) {
+                    $spec_key_arr[] = $value1;
+                }
             }
         }
+        $spec_goods_price = array_merge($spec_goods_price);
+        
         $spec_key_arr = array_unique($spec_key_arr);
 
         $spec_id_arr = db('spec_item')

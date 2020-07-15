@@ -475,6 +475,7 @@ class Order extends Api
                 $log_order['log_desc'] = '下单成功';
                 $log_order['createtime'] = time();
                 db('log_order')->insert($log_order);
+
                 // 剪掉商品库存和商品规格库存
                 $store_count = db('spec_goods_price')->where('id='.$group_id.' and goods_id='.$goods_id)->value('store_count');
                 if($store_count - $num < 0){
@@ -484,6 +485,12 @@ class Order extends Api
                 }else{
                     db('goods')->where('id='.$goods_id)->setDec('store_count',$num);
                     db('spec_goods_price')->where('id='.$group_id.' and goods_id='.$goods_id)->setDec('store_count',$num);
+
+                    // 检索库存为0时下架商品
+                    $goods_store_count = db('goods')->where('id='.$goods_id)->value('store_count');
+                    if($goods_store_count <= 0){
+                        db('goods')->where('id='.$goods_id)->setField('is_on_sale',0);
+                    }
                 }
             }
         }
