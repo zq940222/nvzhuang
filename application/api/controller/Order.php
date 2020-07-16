@@ -305,6 +305,7 @@ class Order extends Api
         }
         
         $user = db('user')->where('id='.$user_id)->find();
+        if($user['level_id'] == 5) $level_id = '';
         //计算订单总价
         Db::startTrans();
         $Common = new Common;
@@ -344,10 +345,10 @@ class Order extends Api
             //查询商品规格价格
             $spec_goods_price = db('spec_goods_price')->where('id='.$goods_data[$key]['group_id'])->find();
             //判断传入价格欲实际价格是否相同
-            if($price != $spec_goods_price['price'.$user['level_id']]) {
+            if($price != $spec_goods_price['price'.$level_id]) {
                 db('cart')
                 ->where('cart_id='.$goods_data[$key]['cart_id'])
-                ->setField('lprice',$spec_goods_price['price'.$user['level_id']]);
+                ->setField('lprice',$spec_goods_price['price'.$level_id]);
                 Db::commit();
                 $this->error('商品价格已更新,请返回购物车确认价格重新下单', null, -3);
             }
@@ -355,7 +356,7 @@ class Order extends Api
             //判断商品上架状态
             if($goods['is_on_sale'] == 0) $this->error(__('商品'.$goods['name'].'已下架'), null, -4);
             //商品价格=商品实际价格*购买数量
-            $goods_price = $spec_goods_price['price'.$user['level_id']] * $num;
+            $goods_price = $spec_goods_price['price'.$level_id] * $num;
             // 当商品不包邮时计算运费
             $shipping_price = 0;
             if($goods['is_free_shipping'] == 0) {
@@ -371,7 +372,6 @@ class Order extends Api
             // 如果用户有推荐人给推荐人返利
             // 查询用户是否使用了充值货款，如果使用了，递归预扣除其上级的货款，并生成记录.成功将会返回一个数组(所有记录的ID集)
             //判断用户货款剩余与充值货款剩余是否相等
-
             $parent_goods_payment = $this->parent_goods_payment($user_id,$total_amount,$Common);
             $parent_goods_payment_str = '';
             if(!empty($parent_goods_payment)){
@@ -423,7 +423,7 @@ class Order extends Api
                 $order['profit'] = $user_back_money['profit'];
                 $order['back_money'] = $user_back_money['back_money'];
             }
-            // if($user['level_id'] != 1){
+            // if($level_id != 1){
             //     if(!empty($user_back_money)){
             //         if(!empty($user_back_money['p_user_id'])){
             //             $order['shipment'] = db('user')->where('id='.$user_back_money['p_user_id'])->value('real_name');
@@ -446,7 +446,7 @@ class Order extends Api
             
             //生成订单
             $order_id = db('order')->insertGetId($order);
-            if (!empty($parent_goods_payment_str)) {
+            if (isset($parent_goods_payment_str) && !empty($parent_goods_payment_str)) {
                 db('user_back_money')->where('id in ('.$parent_goods_payment_str.')')->setField('order_id',$order_id);
             }
 
@@ -499,21 +499,21 @@ class Order extends Api
         }
 
         // 同步云仓库存
-        $Store = new Store;
-        foreach ($goods_data as $key => $value) {
-            $group_id = $goods_data[$key]['group_id'];
-            $num = $goods_data[$key]['num'];
-            $spec_goods_price = db('spec_goods_price')->where('id='.$group_id)->find();
-            // 获取云仓库存
-            $Store_data = $Store->synchro($spec_goods_price['sku']);
-            if($Store_data['code'] == 0){
-                if(isset($Store_data['inventorys']) && !empty($Store_data['inventorys'])){
-                    //同步云仓库存
-                    $qty = $Store_data['inventorys'][0]['qty'];
-                    $r = $Store->inventory_upload($goods_data[$key]['order_sn'],$spec_goods_price['sku'], $qty-$num);
-                }
-            }
-        }
+        // $Store = new Store;
+        // foreach ($goods_data as $key => $value) {
+        //     $group_id = $goods_data[$key]['group_id'];
+        //     $num = $goods_data[$key]['num'];
+        //     $spec_goods_price = db('spec_goods_price')->where('id='.$group_id)->find();
+        //     // 获取云仓库存
+        //     $Store_data = $Store->synchro($spec_goods_price['sku']);
+        //     if($Store_data['code'] == 0){
+        //         if(isset($Store_data['inventorys']) && !empty($Store_data['inventorys'])){
+        //             //同步云仓库存
+        //             $qty = $Store_data['inventorys'][0]['qty'];
+        //             $r = $Store->inventory_upload($goods_data[$key]['order_sn'],$spec_goods_price['sku'], $qty-$num);
+        //         }
+        //     }
+        // }
         // 提交事务
         Db::commit();
         $this->error('下单成功', $order_sn_unique, 1);
@@ -549,6 +549,10 @@ class Order extends Api
             $Common->ins_money_log($user_id, 2, 2, $total_amount, '货款', '扣除货款 '.$total_amount.' 元');
         }
         
+        // 如果下单用户是访客，直接跳出方法
+        if($user['level_id'] == 5) {
+            return $array;
+        }
 
         // 如果用户是一级,记录给直属一级上级的返利，此为平台给的不扣除用户的利润，并且不区分充值货款和入代理货款
         if($user['level_id'] == 1){
