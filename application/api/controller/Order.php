@@ -305,7 +305,11 @@ class Order extends Api
         }
         
         $user = db('user')->where('id='.$user_id)->find();
-        if($user['level_id'] == 5) $level_id = '';
+        if($user['level_id'] == 5){
+            $level_id = '';
+        }else{
+            $level_id = $user['level_id'];
+        }
         //计算订单总价
         Db::startTrans();
         $Common = new Common;

@@ -44,21 +44,35 @@ class Cart extends Api
 
         if($num <= 0) $this->error('购买数量不能小于0', null, -2);
 
-        $store_count = db('spec_goods_price')->where('id',$goods_spec_id)->value('store_count');
+        $spec_goods_price_data = db('spec_goods_price')->where('id',$goods_spec_id)->find();
+        // 判断购物车是否有相同商品相同规格，如果有进行合并
+        $cart = db('cart')
+        ->where('goods_id='.$spec_goods_price_data['goods_id'].' and goods_spec_key="'.$spec_goods_price_data['key'].'"')
+        ->find();
+        if(!empty($cart)){
+            $data['num'] = $num += $cart['num'];
+        }
+
+        $store_count = $spec_goods_price_data['store_count'];
 
         if($store_count - $num < 0) $this->error('商品库存不足', null, -3);
 
         $user = db('user')->where('id='.$user_id)->find();
 
-        $spec_goods_price = db('spec_goods_price')->where('id',$goods_spec_id)->value('price'.$user['level_id']);
+        $spec_goods_price = $spec_goods_price_data['price'.$user['level_id']];
 
         if($lprice != $spec_goods_price) $this->error('传入价格与实际不符', null, -5);
 
         // db('spec_goods_price')->where('id',$goods_spec_id)->setDec('store_count', $num);
 
-        $data['createtime'] = time();
-
-        $res = db('cart')->insert($data);
+        $data['goods_spec_key'] = $spec_goods_price_data['key'];
+        if(!empty($cart)){
+            $data['updatetime'] = time();
+            $res = db('cart')->where('cart_id='.$cart['cart_id'])->update($data); 
+        }else{
+            $data['createtime'] = time();
+            $res = db('cart')->insert($data);            
+        }
 
         if($res) {
             $this->success('添加成功', null, 1);
@@ -149,11 +163,22 @@ class Cart extends Api
         if(empty($cart)) {
             $this->error('购物车商品不存在', null, -2);
         }
-        $res = db('cart')
-        ->where('cart_id='.$cart_id)
-        ->setField('num',$num);
 
-        $this->success('操作成功');
+        $spec_goods_price_data = db('spec_goods_price')->where('goods_id='.$cart['goods_id'].' and `key`="'.$cart['goods_spec_key'].'"')->find();
+        if(!empty($spec_goods_price_data)){
+            if($spec_goods_price_data['store_count'] - $num < 0){
+                $this->error('修改失败，商品数量不足');
+            }else{
+                $res = db('cart')
+                ->where('cart_id='.$cart_id)
+                ->setField('num',$num);
+
+                $this->success('操作成功');
+            }
+        }else{
+            $this->error('数据错误，未找到对应规格，请删除');
+        }
+
     }
 
 

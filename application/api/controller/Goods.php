@@ -196,6 +196,19 @@ class Goods extends Api
         ->field('id,spec_id,item')
         ->where('id in ('.implode(',', $spec_key_arr).')')
         ->select();
+        foreach ($spec_item as $key => $value) {
+            foreach ($spec_goods_price as $k => $v) {
+                $spec_key_arr = explode(',', $v['key']);
+                if(in_array($value['id'], $spec_key_arr)) {
+                    foreach ($spec_key_arr as $kk => $vv) {
+                        if($spec_key_arr[$kk] == $value['id']) {
+                            unset($spec_key_arr[$kk]);
+                        }
+                    }
+                    $spec_item[$key]['group_data'][] = array_merge($spec_key_arr);
+                }
+            }
+        }
         foreach ($spec as $key => $value) {
             $spec_data[$key]['spec_id'] = $spec[$key]['id'];
             $spec_data[$key]['spec_name'] = $spec[$key]['name'];
