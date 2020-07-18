@@ -15,10 +15,25 @@ class Cart extends Api
     //如果接口已经设置无需登录,那也就无需鉴权了
     //
     // 无需登录的接口,*表示全部
-    protected $noNeedLogin = [];
+    protected $noNeedLogin = ['tongbu'];
     // 无需鉴权的接口,*表示全部
     protected $noNeedRight = '*';
 
+public function tongbu()
+{
+    $carts = db('cart')->select();
+    foreach ($carts as $key => $value) {
+        $spec_goods_price = db('spec_goods_price')
+        ->where('id='.$value['goods_spec_id'])
+        ->find();
+        if(!empty($spec_goods_price)){
+            db('cart')->where('cart_id',$value['cart_id'])->setField('goods_spec_key',$spec_goods_price['key']);
+        }else{
+            db('cart')->where('cart_id',$value['cart_id'])->setField('is_delete',1);
+        }
+    }
+    
+}
     /**
      * 添加购物车
      *
@@ -167,7 +182,7 @@ class Cart extends Api
         $spec_goods_price_data = db('spec_goods_price')->where('goods_id='.$cart['goods_id'].' and `key`="'.$cart['goods_spec_key'].'"')->find();
         if(!empty($spec_goods_price_data)){
             if($spec_goods_price_data['store_count'] - $num < 0){
-                $this->error('修改失败，商品数量不足');
+                $this->error('修改失败，商品数量不足',$spec_goods_price_data['store_count']);
             }else{
                 $res = db('cart')
                 ->where('cart_id='.$cart_id)
