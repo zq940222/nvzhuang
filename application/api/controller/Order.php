@@ -190,14 +190,17 @@ class Order extends Api
             ->field('id as goods_id,name,cover_image,is_on_sale,is_free_shipping')
             ->where('id='.$cart[$key]['goods_id'])
             ->find();
+            $spec_goods_price = db('spec_goods_price')
+            ->where('goods_id='.$cart[$key]['goods_id'].' and `key`="'.$cart[$key]['goods_spec_key'].'"')
+            ->find();
             if($goods[$key]['is_on_sale'] == 0) $this->error(__('商品'.$goods[$key]['name'].'已下架'), null, -3);
-            $goods[$key]['group_id'] = $cart[$key]['goods_spec_id'];
+            $goods[$key]['group_id'] = $spec_goods_price['id'];
             $goods[$key]['cover_image'] = get_http_host($goods[$key]['cover_image']);
             $goods[$key]['price'] = $cart[$key]['lprice'];
-            $goods_price += $goods[$key]['price'] * $cart[$key]['num'];
+            $goods_price += $cart[$key]['lprice'] * $cart[$key]['num'];
             $goods[$key]['num'] = $cart[$key]['num'];
             $total_num += $goods[$key]['num'];
-            $goods[$key]['spec_name'] = db('spec_goods_price')->where('id='.$cart[$key]['goods_spec_id'])->value('key_name');
+            $goods[$key]['spec_name'] = $spec_goods_price['key_name'];
 
             // 当商品不包邮时计算运费
             if($goods[$key]['is_free_shipping'] == 0) {
