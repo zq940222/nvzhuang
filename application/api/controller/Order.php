@@ -676,6 +676,7 @@ class Order extends Api
         $page = $this->request->request('page');
         $count = $this->request->request('count');
         $date = $this->request->request('date');
+        $search = $this->request->request('search');
         if(!$user_id) $this->error('参数user_id不能为空', null, -1);
         if(empty($status)) $status = 0;
         if(empty($page)) $page = 1;
@@ -696,13 +697,37 @@ class Order extends Api
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
 
-        $order = db('order')
-        ->field($field)
-        ->where($where)
-        // ->where($time_where)
-        ->order('createtime','desc')
-        ->limit($start,$count)
-        ->select();
+        if(!empty($search)) {
+            $field_arr = explode(',', $field);
+            foreach ($field_arr as $key => $value) {
+                $field_arr[$key] = 'a.'.$value;
+            }
+            $field = implode(',', $field_arr);
+
+            $where_arr = explode(' and ', $where);
+            foreach ($where_arr as $key => $value) {
+                $where_arr[$key] = 'a.'.$value;
+            }
+            $where = implode(' and ', $where_arr);
+
+            $where .= ' and b.goods_name like "%'.$search.'%"';
+
+            $order = db('order a')
+            ->field($field)
+            ->join('order_goods b','a.id=b.order_id')
+            ->where($where)
+            ->order('a.createtime','desc')
+            ->limit($start,$count)
+            ->select();
+        }else{
+            $order = db('order')
+            ->field($field)
+            ->where($where)
+            ->order('createtime','desc')
+            ->limit($start,$count)
+            ->select();
+        }
+        
         foreach ($order as $key => $value) {
             if($order[$key]['is_refund'] == 1) {
                 $refund_order = db('refund_order')->where('order_id='.$order[$key]['order_id'])->find();
