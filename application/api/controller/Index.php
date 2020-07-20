@@ -12,6 +12,29 @@ class Index extends Api
     protected $noNeedLogin = ['*'];
     protected $noNeedRight = ['*'];
 
+public function tongbu()
+{
+    $goods = db('goods')
+    ->field('id,store_count')
+    ->where('is_on_sale=1')
+    ->select();
+    foreach ($goods as $key => $value) {
+        $spec_goods_price_count = db('spec_goods_price')
+        ->where('goods_id='.$goods[$key]['id'])
+        ->count();
+        if($spec_goods_price_count > 0){
+            $spec_goods_price_sum = db('spec_goods_price')
+            ->where('goods_id='.$goods[$key]['id'])
+            ->sum('store_count');
+            if($goods[$key]['store_count'] != $spec_goods_price_sum){
+                // dump($goods[$key]['store_count']);
+                // dump($spec_goods_price_sum);
+                // dump('----------------');
+                db('goods')->where('id='.$goods[$key]['goods_id'])->setField('store_count',$spec_goods_price_sum);
+            }
+        }
+    }
+}
     /**
      * 首页
      *
