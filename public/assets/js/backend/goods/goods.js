@@ -39,7 +39,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {field: 'weigh', title: __('Weigh')},
                         {field: 'is_new', title: __('Is_new'),operate:false, searchList: {"0":__('Is_new 0'),"1":__('Is_new 1')}, formatter: Table.api.formatter.normal},
                         {field: 'is_hot', title: __('Is_hot'),operate:false, searchList: {"0":__('Is_hot 0'),"1":__('Is_hot 1')}, formatter: Table.api.formatter.normal},
-                        {field: 'sales_sum', title: __('Sales_sum'),operate:false},
+                        // {field: 'sales_sum', title: __('Sales_sum'),operate:false},
                         {field: 'createtime', title: __('Createtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
                         {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate,
                             buttons: [{
