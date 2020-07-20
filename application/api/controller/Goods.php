@@ -139,6 +139,7 @@ class Goods extends Api
         ->field($field)
         ->where($where)
         ->find();
+        if(empty($goods)) $this->error(__('商品不存在'), null, -2);
         $spec_goods_price = db('spec_goods_price')->where('goods_id='.$goods_id)->find();
         if(!empty($spec_goods_price)){
             $goods['price1'] = $spec_goods_price['price1'];
