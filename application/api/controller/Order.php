@@ -412,9 +412,12 @@ class Order extends Api
             if($user['goods_payment'] == $user['recharge_goods_money']){
                 $gm_money = $total_amount;
             }else{
-                if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
-                    $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                if($user['recharge_goods_money'] > 0){
+                    if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
+                        $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                    }
                 }
+                
             }
             if($gm_money > 0){
                 $order['gm_type'] = 2;
@@ -542,8 +545,13 @@ class Order extends Api
         if($user['goods_payment'] == $user['recharge_goods_money']){
             $gm_money = $total_amount;
         }else{
-            if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
-                $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+            if($user['goods_payment'] < 0 || $user['recharge_goods_money'] < 0){
+                $this->error('数据错误，请联系客服', null, -8);
+            }
+            if($user['recharge_goods_money'] > 0){
+                if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
+                    $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                }
             }
         }
 
@@ -694,7 +702,7 @@ class Order extends Api
         $field = 'id as order_id,user_id,order_sn,is_refund,status,goods_num,total_amount,createtime';
         // $where = 'is_refund=0 and user_id='.$user_id;
         $where = 'user_id='.$user_id;
-        if($status > 0) $where .= ' and status='.$status;
+        if($status > 0) $where .= ' and is_refund=0 and status='.$status;
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
 

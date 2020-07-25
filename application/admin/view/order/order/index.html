@@ -18,6 +18,7 @@
                     <div id="toolbar" class="toolbar">
                         <a href="javascript:;" class="btn btn-primary btn-refresh" title="{:__('Refresh')}" ><i class="fa fa-refresh"></i> </a>
 
+                        <a href="javascript:;" class="btn btn-success btn-disabled disabled btn-shippings {:$auth->check('order/shippings')?'':'hide'}" title="{:__('批量发货')}" ><i class="fa fa-ambulance"></i> {:__('批量发货')}</a>
 
                         
                     </div>

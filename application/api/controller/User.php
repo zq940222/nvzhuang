@@ -1210,9 +1210,12 @@ class User extends Api
         if($user['goods_payment'] == $user['recharge_goods_money']){
             $gm_money = $total_amount;
         }else{
-            if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
-                $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+            if($user['recharge_goods_money'] > 0){
+                if($user['goods_payment'] - $user['recharge_goods_money'] < $total_amount){
+                    $gm_money = $total_amount - ($user['goods_payment'] - $user['recharge_goods_money']);
+                }
             }
+            
         }
         db('user')->where('id='.$user_id)->setDec('recharge_goods_money', $gm_money);
         db('user')->where('id='.$user_id)->setDec('goods_payment',$total_amount);

@@ -93,6 +93,10 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
 
             // 为表格绑定事件
             Table.api.bindevent(table);
+            $(".btn-shippings").click(function(){
+                var ids = Table.api.selectedids(table);
+                Fast.api.open("order/order/shippings?ids="+ids);
+            })
         },
         add: function () {
             Controller.api.bindevent();
@@ -104,6 +108,9 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             Controller.api.bindevent();
         },
         shipping: function () {
+            Controller.api.bindevent();
+        },
+        shippings: function () {
             Controller.api.bindevent();
         },
         api: {

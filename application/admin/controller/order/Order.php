@@ -261,4 +261,68 @@ class Order extends Backend
         return $this->view->fetch();
     }
 
+    /**
+     * 订单发货
+     * @return mixed
+     */
+
+    public function shippings($ids = null)
+    {
+        $row = $this->model->get($ids);
+        if (!$row) {
+            $this->error(__('No Results were found'));
+        }
+        if ($this->request->isPost()) {
+            $params = $this->request->post("row/a");
+            if ($params) {
+                $params = $this->preExcludeFields($params);
+                $result = false;
+                $params['status'] = 2;
+                $params['shipping_time'] = time();
+                Db::startTrans();
+                try {
+                    //是否采用模型验证
+                    // if ($this->modelValidate) {
+                    //     $name = str_replace("\\model\\", "\\validate\\", get_class($this->model));
+                    //     $validate = is_bool($this->modelValidate) ? ($this->modelSceneValidate ? $name . '.edit' : $name) : $this->modelValidate;
+                    //     $row->validateFailException(true)->validate($validate);
+                    // }
+                    // $result = $row->allowField(true)->save($params);
+
+                    $id_arr = explode(',', $ids);
+                    foreach ($id_arr as $key => $value) {
+                        $order = db('order')->where('id='.$value)->find();
+                        if($order['is_refund'] == 1){
+                            unset($id_arr[$key]);
+                        }else{
+                            if($order['status'] == 1){
+                                $result = db('order')->where('id',$value)->update($params);
+                            }
+                        }
+                    }
+
+                    Db::commit();
+                } catch (ValidateException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (PDOException $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                } catch (Exception $e) {
+                    Db::rollback();
+                    $this->error($e->getMessage());
+                }
+                if ($result !== false) {
+                    $this->success();
+                } else {
+                    $this->error(__('No rows were updated'));
+                }
+            }
+            $this->error(__('Parameter %s can not be empty', ''));
+        }
+        $this->view->assign("ids", $ids);
+        $this->view->assign("row", $row);
+        return $this->view->fetch();
+    }
+
 }
