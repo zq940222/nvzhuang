@@ -119,9 +119,9 @@ class Refund extends Backend
             }else{
                 $order->save(['status' => $params['status']]);
                 if($params['status'] == -1){
-                    $refund_order = db('refund_order')->where('status>="0" and order_id='.$order['order_id'])->select();
+                    $refund_order = db('refund_order')->where('status>="0" and order_id='.$order['order_id'])->find();
                     if(empty($refund_order)){
-                        db('order')->where('order')->setField('is_refund',0);
+                        db('order')->where('order_id='.$order['order_id'])->setField('is_refund',0);
                     }
                 }
             }
