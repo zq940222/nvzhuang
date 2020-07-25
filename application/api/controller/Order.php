@@ -553,7 +553,8 @@ class Order extends Api
             db('user')->where('id='.$user_id)->setInc('lock_goods_money',$total_amount);
             $Common->ins_money_log($user_id, 2, 2, $total_amount, '货款', '预扣除货款 '.$total_amount.' 元');
         }else{
-            $Common->ins_money_log($user_id, 2, 2, $total_amount, '货款', '扣除货款 '.$total_amount.' 元');
+            $user_money = db('user')->where('id='.$user_id)->find();
+            $Common->ins_money_log($user_id, 2, 2, $total_amount, '货款', '扣除货款 '.$total_amount.' 元', $user['goods_payment'], $user_money['goods_payment']);
         }
         
         // 如果下单用户是访客，直接跳出方法

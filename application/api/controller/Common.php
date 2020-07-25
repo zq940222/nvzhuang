@@ -148,8 +148,10 @@ class Common extends Api
      * @param $money 资金
      * @param $memo 备注
      * @param $desc 描述
+     * @param $before 变更前余额
+     * @param $after 变更后余额
      */
-    public function ins_money_log($user_id, $money_type, $type, $money, $memo, $desc = '')
+    public function ins_money_log($user_id, $money_type, $type, $money, $memo, $desc = '', $before=0, $after=0)
     {
         $money_log['user_id'] = $user_id;
         $money_log['money_type'] = $money_type;
@@ -157,6 +159,8 @@ class Common extends Api
         $money_log['money'] = $money;
         $money_log['memo'] = $memo;
         $money_log['desc'] = $desc;
+        $money_log['before'] = $before;
+        $money_log['after'] = $after;
         $money_log['createtime'] = time();
         db('user_money_log')->insert($money_log);
 
