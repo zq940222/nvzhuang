@@ -272,11 +272,11 @@ class Order extends Api
      */
     public function place_order()
     {
-        // 加锁
-        $Redislock = new Redislock;
-        // 定义锁标识
-        $lock_key = 'place_order';
-        $order_lock = $Redislock->lock($lock_key,5,5);
+        // // 加锁
+        // $Redislock = new Redislock;
+        // // 定义锁标识
+        // $lock_key = 'place_order';
+        // $order_lock = $Redislock->lock($lock_key,5,5);
 
         $data = $_REQUEST;
         //接收数据
@@ -1360,7 +1360,7 @@ class Order extends Api
                 }
                 $this->success('退货订单失效，超出发货时间，请重新发起', null, -2);
             }
-            $order_goods['refund_order_state'] = '1.退货商品，2.发货单';
+            $order_goods['refund_order_state'] = '请付纸条，备注您的姓名加代理退货几个字，谢谢';
         }
         if($refund_order['status'] == 2)
         {
