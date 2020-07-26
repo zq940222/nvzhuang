@@ -1023,7 +1023,7 @@ class Order extends Api
         $order_id = $this->request->request('order_id');
         if(!$user_id || !$order_id) $this->error('参数不能为空', null, -1);
 
-        $field = 'id as order_id,order_sn,is_refund,status,goods_num,total_amount,createtime';
+        $field = 'id as order_id,order_sn,is_refund,status,goods_num,total_amount,createtime,province_id,city_id,area_id,address,consignee,mobile,user_remark';
         $where = 'user_id='.$user_id.' and id='.$order_id;
 
         $level_id = db('user')->where('id='.$user_id)->value('level_id');
@@ -1032,6 +1032,21 @@ class Order extends Api
         ->field($field)
         ->where($where)
         ->find();
+
+        $user_address = '';
+        if(!empty($order['province_id'])){
+            $user_address .= db('area')->where('id='.$order['province_id'])->value('name');
+        }if(!empty($order['city_id'])){
+            $user_address .= db('area')->where('id='.$order['city_id'])->value('name');
+        }if(!empty($order['province_id'])){
+            $user_address .= db('area')->where('id='.$order['province_id'])->value('name');
+        }if(!empty($order['address'])){
+            $user_address .= $order['address'];
+        }
+        $user_address .= ' '.$order['consignee'];
+        $user_address .= ' '.$order['mobile'];
+        $order['user_address'] = $user_address;
+
         $order['refund_type'] = 0;
         if($order['is_refund'] == 1){
             //售后类型:0=正常订单,1=仅退款,2=退货退款
