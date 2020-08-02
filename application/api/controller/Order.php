@@ -323,6 +323,7 @@ class Order extends Api
                 for ($i=0; $i < $gdata[$key]['num']; $i++) { 
                     $goodsdata['goods_id'] = $gdata[$key]['goods_id'];
                     $goodsdata['group_id'] = $gdata[$key]['group_id'];
+                    $goodsdata['cart_id'] = $gdata[$key]['cart_id'];
                     $goodsdata['num']      = 1;
                     $goodsdata['price']    = $gdata[$key]['price'];
                     $goods_data[] = $goodsdata;
