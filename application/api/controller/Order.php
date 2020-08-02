@@ -323,7 +323,9 @@ class Order extends Api
                 for ($i=0; $i < $gdata[$key]['num']; $i++) { 
                     $goodsdata['goods_id'] = $gdata[$key]['goods_id'];
                     $goodsdata['group_id'] = $gdata[$key]['group_id'];
-                    $goodsdata['cart_id'] = $gdata[$key]['cart_id'];
+                    if(isset($gdata[$key]['cart_id']) && !empty($gdata[$key]['cart_id'])){
+                        $goodsdata['cart_id'] = $gdata[$key]['cart_id'];
+                    }
                     $goodsdata['num']      = 1;
                     $goodsdata['price']    = $gdata[$key]['price'];
                     $goods_data[] = $goodsdata;
@@ -354,11 +356,13 @@ class Order extends Api
             $spec_goods_price = db('spec_goods_price')->where('id='.$goods_data[$key]['group_id'])->find();
             //判断传入价格欲实际价格是否相同
             if($price != $spec_goods_price['price'.$level_id]) {
-                db('cart')
-                ->where('cart_id='.$goods_data[$key]['cart_id'])
-                ->setField('lprice',$spec_goods_price['price'.$level_id]);
-                Db::commit();
-                $this->error('商品价格已更新,请返回购物车确认价格重新下单', null, -3);
+                if(isset($goods_data[$key]['cart_id']) && !empty($goods_data[$key]['cart_id'])){
+                    db('cart')
+                    ->where('cart_id='.$goods_data[$key]['cart_id'])
+                    ->setField('lprice',$spec_goods_price['price'.$level_id]);
+                    Db::commit();
+                    $this->error('商品价格已更新,请返回购物车确认价格重新下单', null, -3);
+                }
             }
             $level = db('level')->where('id='.$user['level_id'])->find();
             //判断商品上架状态

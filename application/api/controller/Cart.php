@@ -62,7 +62,7 @@ public function tongbu()
         $spec_goods_price_data = db('spec_goods_price')->where('id',$goods_spec_id)->find();
         // 判断购物车是否有相同商品相同规格，如果有进行合并
         $cart = db('cart')
-        ->where('goods_id='.$spec_goods_price_data['goods_id'].' and goods_spec_key="'.$spec_goods_price_data['key'].'"')
+        ->where('user_id='.$user_id.' and goods_id='.$spec_goods_price_data['goods_id'].' and goods_spec_key="'.$spec_goods_price_data['key'].'"')
         ->find();
         if(!empty($cart)){
             $data['num'] = $num += $cart['num'];
