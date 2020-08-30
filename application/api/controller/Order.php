@@ -496,7 +496,7 @@ class Order extends Api
                 if($store_count - $num < 0){
                     // 回滚事务
                     Db::rollback();
-                    $this->error('订单创建失败，商品库存不足，请稍后再试', null, -6);
+                    $this->error('订单创建失败，商品【'.$goods['goods_sn'].'】库存不足，请稍后再试', null, -6);
                 }else{
                     db('goods')->where('id='.$goods_id)->setDec('store_count',$num);
                     db('spec_goods_price')->where('id='.$group_id.' and goods_id='.$goods_id)->setDec('store_count',$num);

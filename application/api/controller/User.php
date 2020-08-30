@@ -820,6 +820,35 @@ class User extends Api
         $money_info['goods_payment'] = $user['goods_payment'];
         //保证金
         $money_info['margin'] = $user['margin'];
+        $money_info['margin_status'] = 0;
+        $money_info['margin_status_name'] = '解冻保证金';
+        if($user['margin'] > 0){
+            $thaw_margin = db('thaw_margin')
+            ->where('status="0" and user_id='.$user_id)
+            ->order('createtime','desc')
+            ->find();
+            if(empty($thaw_margin)){
+                $agent_upgrade = db('agent_upgrade')
+                ->where('status="1" and user_id='.$user_id)
+                ->order('createtime','desc')
+                ->find();
+                $half_a_year_ago_time = strtotime("-0 year -6 month -0 day");
+                if(!empty($agent_upgrade)){
+                    if($half_a_year_ago_time > $agent_upgrade['updatetime']){
+                        $money_info['margin_status'] = 1;
+                    }
+                }else{
+                    if($half_a_year_ago_time > $user['createtime']){
+                        $money_info['margin_status'] = 1;
+                    }
+                }                     
+            }else{
+                $money_info['margin_status_name'] = '申请中';
+            }
+       
+        }
+
+        
         //奖励金
         $money_info['bounty'] = db('user_bounty')->where('user_id='.$user_id.' and status="0"')->sum('money');
         //利润
@@ -874,6 +903,47 @@ class User extends Api
     }
 
     /**
+     * 解冻保证金申请
+     */
+    public function thaw_margin($user_id)
+    {
+        $user = db('user')->where('id='.$user_id)->find();
+        if($user['margin'] <= 0){
+            $this->error('没有保证金，无法申请');
+        }else{
+            $thaw_margin = db('thaw_margin')
+            ->where('status="0" and user_id='.$user_id)
+            ->order('createtime','desc')
+            ->find();
+            if(empty($thaw_margin)){
+                $agent_upgrade = db('agent_upgrade')
+                ->where('status="1" and user_id='.$user_id)
+                ->order('createtime','desc')
+                ->find();
+                $half_a_year_ago_time = strtotime("-0 year -6 month -0 day");
+                if(!empty($agent_upgrade)){
+                    if($half_a_year_ago_time < $agent_upgrade['updatetime']){
+                        $this->error('保证金解冻时间未到');
+                    }
+                }else{
+                    if($half_a_year_ago_time < $user['createtime']){
+                        $this->error('保证金解冻时间未到');
+                    }
+                }                     
+            }else{
+                $this->error('申请中');
+            }
+        }
+        $data['user_id'] = $user_id;
+        $data['margin_num'] = $user['margin'];
+        $data['status'] = 0;
+        $data['createtime'] = time();
+        $data['updatetime'] = 0;
+        db('thaw_margin')->insert($data);
+        $this->success('请求成功');
+    }    
+
+    /**
      * 获取代理等级信息
      */
     public function level_info()
@@ -904,7 +974,9 @@ class User extends Api
         if(empty($type)) $type = 1;
         if(empty($date)) $date = date("Y-m");
 
-        $where1 = 'a.status="1" and a.superior_id='.$user_id;
+        $user = db('user')->where('id='.$user_id)->find();
+
+        $where1 = 'a.status="1" and a.superior_id='.$user_id.' and a.level_id>'.$user['level_id'];
 
         $where2 = 'status="1" and inviter_id='.$user_id;
 
