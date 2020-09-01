@@ -5,12 +5,12 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
             // 初始化表格参数配置
             Table.api.init({
                 extend: {
-                    index_url: 'message/message/index' + location.search,
-                    add_url: 'message/message/add',
-                    edit_url: 'message/message/edit',
-                    del_url: 'message/message/del',
-                    multi_url: 'message/message/multi',
-                    table: 'message',
+                    index_url: 'user/user_money_log/index' + location.search,
+                    add_url: 'user/user_money_log/add',
+                    edit_url: 'user/user_money_log/edit',
+                    del_url: 'user/user_money_log/del',
+                    multi_url: 'user/user_money_log/multi',
+                    table: 'user_money_log',
                 }
             });
 
@@ -26,12 +26,15 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {checkbox: true},
                         {field: 'id', title: __('Id')},
                         {field: 'user_id', title: __('User_id')},
-                        {field: 'message_category', title: __('Message_category'), searchList: {"1":__('Message_category 1'),"2":__('Message_category 2')}, formatter: Table.api.formatter.normal},
-                        {field: 'message_title', title: __('Message_title')},
-                        {field: 'message_content', title: __('Message_content')},
-                        {field: 'status', title: __('Status'), searchList: {"0":__('Status 0'),"1":__('Status 1')}, formatter: Table.api.formatter.status},
-                        {field: 'is_read', title: __('Is_read'), searchList: {"0":__('Is_read 0'),"1":__('Is_read 1')}, formatter: Table.api.formatter.normal},
+                        {field: 'money_type', title: __('Money_type'), searchList: {"1":__('Money_type 1'),"2":__('Money_type 2')}, formatter: Table.api.formatter.normal},
+                        {field: 'type', title: __('Type'), searchList: {"1":__('Type 1'),"2":__('Type 2')}, formatter: Table.api.formatter.normal},
+                        {field: 'money', title: __('Money'), operate:'BETWEEN'},
+                        {field: 'before', title: __('Before'), operate:'BETWEEN'},
+                        {field: 'after', title: __('After'), operate:'BETWEEN'},
+                        {field: 'memo', title: __('Memo')},
+                        {field: 'desc', title: __('Desc')},
                         {field: 'createtime', title: __('Createtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
+                        {field: 'user.nickname', title: __('User.nickname')},
                         {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate, formatter: Table.api.formatter.operate}
                     ]
                 ]

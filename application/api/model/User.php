@@ -643,6 +643,7 @@ class User extends Model
             if($data['status'] != 0) {
                 return ['msg'=>'申请已审核，请勿重复操作','code'=>-4,'success'=>false];
             }
+            db('user_recharge')->where('id='.$data['id'])->setField('status',-1);
             $message['user_id'] = $data['user_id'];
             $message['message_category'] = 1;
             $message['message_title'] = '货款充值';
