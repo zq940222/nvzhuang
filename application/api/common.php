@@ -31,7 +31,7 @@ function get_http_host($url)
      * @param $memo 备注
      * @param $desc 描述
      */
-    function ins_money_log($user_id, $money_type, $type, $money, $memo, $desc = '')
+    function ins_money_log($user_id, $money_type, $type, $money, $memo, $desc = '', $before=0, $after=0)
     {
         $money_log['user_id'] = $user_id;
         $money_log['money_type'] = $money_type;
@@ -39,6 +39,8 @@ function get_http_host($url)
         $money_log['money'] = $money;
         $money_log['memo'] = $memo;
         $money_log['desc'] = $desc;
+        $money_log['before'] = $before;
+        $money_log['after'] = $after;
         $money_log['createtime'] = time();
         db('user_money_log')->insert($money_log);
 

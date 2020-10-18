@@ -37,8 +37,11 @@ class Order extends Model
         db('user')
         ->where('id='.$refund_order['user_id'])
         ->setInc('recharge_goods_money', $recharge_goods_money);
+        $after_user = db('user')
+        ->where('id='.$refund_order['user_id'])
+        ->find();
         $Common = new Common;
-        $Common->ins_money_log($refund_order['user_id'], 2, 1, $refund_order['order_price'], '货款', '退货成功，预扣货款退回');
+        $Common->ins_money_log($refund_order['user_id'], 2, 1, $refund_order['order_price'], '货款', '退货成功，预扣货款退回',$user['goods_payment'],$after_user['goods_payment']);
         // 站内信：下单用户。
         $message_template = db('message_template')->where('id=22')->find();
         $content = str_replace('money', $refund_order['order_price'], $message_template['message_content']);
@@ -59,7 +62,10 @@ class Order extends Model
                     db('user')
                     ->where('id='.$user_back_money[$key]['p_user_id'])
                     ->setDec('lock_goods_money', $user_back_money[$key]['shipment_money']);
-                    $Common->ins_money_log($user_back_money[$key]['p_user_id'], 2, 1, $refund_order['order_price'], '货款', '代理退货成功，预扣货款退回');
+                    $p_after_user = db('user')
+                    ->where('id='.$user_back_money[$key]['p_user_id'])
+                    ->find();
+                    $Common->ins_money_log($user_back_money[$key]['p_user_id'], 2, 1, $refund_order['order_price'], '货款', '代理退货成功，预扣货款退回',$user['goods_payment'],$p_after_user['goods_payment']);
                     // 站内信：下单用户。
                     $message_template = db('message_template')->where('id=23')->find();
                     $content1 = str_replace('money', $user_back_money[$key]['money'], $message_template['message_content']);

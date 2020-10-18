@@ -26,6 +26,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {checkbox: true},
                         {field: 'id', title: __('Id')},
                         {field: 'user_id', title: __('User_id')},
+                        {field: 'user.nickname', title: __('User.nickname')},
                         {field: 'money_type', title: __('Money_type'), searchList: {"1":__('Money_type 1'),"2":__('Money_type 2')}, formatter: Table.api.formatter.normal},
                         {field: 'type', title: __('Type'), searchList: {"1":__('Type 1'),"2":__('Type 2')}, formatter: Table.api.formatter.normal},
                         {field: 'money', title: __('Money'), operate:'BETWEEN'},
@@ -34,7 +35,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {field: 'memo', title: __('Memo')},
                         {field: 'desc', title: __('Desc')},
                         {field: 'createtime', title: __('Createtime'), operate:'RANGE', addclass:'datetimerange', formatter: Table.api.formatter.datetime},
-                        {field: 'user.nickname', title: __('User.nickname')},
+                        
                         {field: 'operate', title: __('Operate'), table: table, events: Table.api.events.operate, formatter: Table.api.formatter.operate}
                     ]
                 ]

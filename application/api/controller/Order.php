@@ -377,7 +377,10 @@ class Order extends Api
 
             //计算订单总价格和所有订单累计价格
             $total_amount = $goods_price + $shipping_price;
+            $user = db('user')->where('id='.$user_id)->find();
             if($user['goods_payment'] - $total_amount < 0) {
+                // 回滚事务
+                Db::rollback();
                 $this->error('货款不足，请充值', null, -5);
             }
 
@@ -1175,14 +1178,16 @@ class Order extends Api
             if(!empty($user_back_money)){
                 foreach ($user_back_money as $key => $value) {
                     
-                    if($user_back_money[$key]['inviter_id'] > 0){
+                    if($user_back_money[$key]['inviter_id'] > 0 && $user_back_money[$key]['inviter_id'] != $user_back_money[$key]['p_user_id']){
                         if($user_back_money[$key]['back_money'] > 0){
+                            $user = db('user')->where('id='.$user_back_money[$key]['user_id'])->find();
+
                             db('user')
                             ->where('id='.$user_back_money[$key]['inviter_id'])
                             ->setInc('money', $user_back_money[$key]['back_money']);
-                            $Common->ins_money_log($user_back_money[$key]['inviter_id'], 1, 1, $user_back_money[$key]['back_money'], '余额', '返利');
+                            $Common->ins_money_log($user_back_money[$key]['inviter_id'], 1, 1, $user_back_money[$key]['back_money'], '余额', '返利', $user['money'], $user['money']+$user_back_money[$key]['back_money']);
                             //添加奖励金记录表
-                            $user = db('user')->where('id='.$user_back_money[$key]['user_id'])->find();
+                            
                             $user_bounty = array();
                             $user_bounty['user_id'] = $user_back_money[$key]['inviter_id'];
                             $user_bounty['sub_id'] = $user_back_money[$key]['user_id'];
@@ -1194,6 +1199,7 @@ class Order extends Api
                     }
                     // 出货方ID
                     if($user_back_money[$key]['p_user_id'] > 0){
+                        $p_user = db('user')->where('id='.$user_back_money[$key]['p_user_id'])->find();
                         //加到上级用户余额
                         db('user')
                         ->where('id='.$user_back_money[$key]['p_user_id'])
@@ -1202,9 +1208,11 @@ class Order extends Api
                         db('user')
                         ->where('id='.$user_back_money[$key]['p_user_id'])
                         ->setDec('lock_goods_money', $user_back_money[$key]['shipment_money']);
-                        $Common->ins_money_log($user_back_money[$key]['p_user_id'], 1, 1, $user_back_money[$key]['shipment_money'], '余额', '成本价');
+                        $Common->ins_money_log($user_back_money[$key]['p_user_id'], 1, 1, $user_back_money[$key]['shipment_money'], '余额', '成本价', $p_user['money'], $p_user['money']+$user_back_money[$key]['shipment_money']);
                         if($user_back_money[$key]['profit'] > 0){
-                            $Common->ins_money_log($user_back_money[$key]['p_user_id'], 1, 1, $user_back_money[$key]['profit'], '余额', '利润');
+                            $p_user = db('user')->where('id='.$user_back_money[$key]['p_user_id'])->find();
+                            $Common->ins_money_log($user_back_money[$key]['p_user_id'], 1, 1, $user_back_money[$key]['profit'], '余额', '利润', $p_user['money'], $p_user['money']+$user_back_money[$key]['profit']);
+                            $Common->ins_money_log($user_back_money[$key]['p_user_id'], 1, 1, $user_back_money[$key]['profit'], '余额', '利润', $p_user['money']+$user_back_money[$key]['shipment_money'], $p_user['money']+$user_back_money[$key]['shipment_money']+$user_back_money[$key]['profit']);
                         }
                     }
                     db('user_back_money')->where('id='.$value['id'])->setField("status",1);
