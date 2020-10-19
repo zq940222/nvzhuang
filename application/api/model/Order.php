@@ -78,9 +78,13 @@ class Order extends Model
         }
         // 改变订单状态
         // db('order')->where('id='.$refund_order['order_id'])->setField('status','3');
-        db('refund_order')->where('id='.$id)->setField('status','3');
-
-        return true;
+        $res = db('refund_order')->where('id='.$id)->setField('status','3');
+        if($res){
+            return true;
+        }else{
+            return false;
+        }
+        
     }
 
 }
