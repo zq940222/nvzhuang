@@ -111,6 +111,8 @@ class Refund extends Backend
                     $res = $Order->confirm_return($ids);
                     if($res){
                         Db::commit();
+                    }else{
+                        Db::rollback();
                     }
                 }catch (Exception $exception){
                     Db::rollback();
